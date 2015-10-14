@@ -8,9 +8,6 @@ var jshint = require('gulp-jshint');
 var jscs = require('gulp-jscs');
 var stylish = require('gulp-jscs-stylish');
 var mocha = require('gulp-mocha');
-var shell = require('gulp-shell');
-var rename = require('gulp-rename');
-var del = require('del');
 var exec = require('child_process').exec;
 
 /**
@@ -32,10 +29,6 @@ gulp.task('lint', function () {
  * Task to run mocha tests
  */
 gulp.task('mocha', function () {
-  require('./').settings.ENTITIESPATH = path.join(
-    __dirname,
-    'tests/unit/back/models/'
-  );
   return gulp.src(paths.mochaSrc, {read: false})
     .pipe(mocha({
       reporter: 'spec'
