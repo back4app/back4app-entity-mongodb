@@ -4,6 +4,7 @@ var expect = require('chai').expect;
 var mongoose = require('mongoose');
 var Entity =
   require('../../node_modules/@back4app/back4app-entity').models.Entity;
+var Schema = require('../../src/back/models/schema')
 
 describe('index', function () {
   var db;
@@ -38,6 +39,30 @@ describe('index', function () {
     var person = new Person();
     person.name = 'John';
     expect(Person.methods.greeting.call(person), 'I am John');
+  });
+
+  it('expect to create new schema', function () {
+    var Person = Entity.specify({
+      attributes: {
+        name: {
+          type: 'String',
+          multiplicity: '1',
+          default: undefined
+        }
+      },
+      methods: {
+        greeting: function greeting() {
+          return 'I am ' + this.name;
+        }
+      }
+    });
+
+    var PersonModel = Schema.buildModel(Person);
+
+    console.log(new PersonModel({
+      name: 'John'
+    }));
+
   });
 
 });
