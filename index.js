@@ -1,3 +1,3 @@
-var entityBack = require('./src/back');
+var adapter = require('./src/back');
 
-module.exports = entityBack;
+module.exports = adapter;

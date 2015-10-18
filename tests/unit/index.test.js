@@ -4,7 +4,7 @@ var expect = require('chai').expect;
 var mongoose = require('mongoose');
 var Entity =
   require('../../node_modules/@back4app/back4app-entity').models.Entity;
-var Schema = require('../../src/back/models/schema')
+var Schema = require('../../src/back/models/schema');
 
 describe('index', function () {
   var db;
@@ -22,6 +22,7 @@ describe('index', function () {
 
   it('expect to create new entity', function () {
     var Person = Entity.specify({
+      name: 'Person',
       attributes: {
         name: {
           type: 'String',
@@ -43,6 +44,7 @@ describe('index', function () {
 
   it('expect to create new schema', function () {
     var Person = Entity.specify({
+      name: 'Person',
       attributes: {
         name: {
           type: 'String',
