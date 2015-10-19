@@ -38,7 +38,7 @@ function SchemaBuilder () {
       schemaObj[attrObj.name] = type;
     }
     var schema = new Schema(schemaObj);
-    var Model = mongoose.model(entity.name, schema);
+    var Model = mongoose.model(entity.specification.name, schema);
     return Model;
 
   }
