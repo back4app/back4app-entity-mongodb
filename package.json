@@ -4,8 +4,7 @@
   "description": "back{4}app entity persistence mongodb plugin",
   "main": "index.js",
   "scripts": {
-    "lint": "gulp lint",
-    "test": "gulp mocha"
+    "test": "gulp test"
   },
   "repository": {
     "type": "git",
@@ -27,6 +26,7 @@
   },
   "homepage": "https://github.com/back4app/back4app-entity-mongodb#readme",
   "devDependencies": {
+    "chai": "^3.3.0",
     "gulp": "^3.9.0",
     "gulp-jscs": "^2.0.0",
     "gulp-jscs-stylish": "^1.2.1",
@@ -34,11 +34,10 @@
     "gulp-mocha": "^2.1.3",
     "jsdoc": "^3.3.2",
     "jshint-stylish": "^2.0.1",
-    "mocha": "^2.3.3",
-    "chai": "^3.3.0"
+    "mocha": "^2.3.3"
   },
   "dependencies": {
-    "@back4app/back4app-entity": "^1.0.1",
+    "@back4app/back4app-entity": "^1.0.3",
     "mongoose": "^4.1.11"
   }
 }
