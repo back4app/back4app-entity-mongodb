@@ -44,4 +44,27 @@ describe('index', function () {
     expect(Person.methods.greeting.call(person), 'I am John');
   });
 
+  it('expect to create new schema', function () {
+    var Person = Entity.specify({
+      name: 'Person',
+      attributes: {
+        name: {
+          type: 'String',
+          multiplicity: '1',
+          default: undefined
+        }
+      },
+      methods: {
+        greeting: function greeting() {
+          return 'I am ' + this.name;
+        }
+      }
+    });
+
+    var PersonModel = Schema.buildModel(Person);
+
+    console.log(new PersonModel({
+      name: 'John'
+    }));
+
 });
