@@ -44,16 +44,16 @@ function SchemaBuilder () {
   }
 
   function getSchemaType(type) {
-    switch(typeof type) {
-      case Type.ObjectAttribute:
+    switch(type.name) {
+      case 'ObjectAttribute':
         return Object;
-      case Type.BooleanAttribute:
+      case 'BooleanAttribute':
         return Boolean;
-      case Type.DateAttribute:
+      case 'DateAttribute':
         return Date;
-      case Type.NumberAttribute:
+      case 'NumberAttribute':
         return Number;
-      case Type.StringAttribute:
+      case 'StringAttribute':
         return String;
       default:
         return Schema.Types.ObjectId;
