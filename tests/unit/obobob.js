@@ -23,10 +23,10 @@ describe('index', function () {
         }
       }
     });
-    mongo.registerEntity(Person).then(function (schema) {
-      console.log(new schema({
+    mongo.registerEntity(Person).then(function (Model) {
+      expect(new Model({
         name: 'John'
-      }));
+      })).to.have.property('_id');
       done();
     });
   });

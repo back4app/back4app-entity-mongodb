@@ -13,6 +13,7 @@ function MongoAdapter() {
   mongo.entitySchema = null;
 
   mongo.registerEntity = registerEntity;
+  mongo.getMongooseModel = getMongooseModel;
 
   function registerEntity(entity) {
     var promise = openConnection().then(function (db) {
@@ -20,7 +21,7 @@ function MongoAdapter() {
       mongo.entitySchema = Schema.buildModel(entity);
       return mongo.entitySchema;
     }, function (db) {
-      console.log('error error error');
+      throw 'connection error';
       return db;
     }).then(function() {
       closeConnection();
@@ -42,6 +43,20 @@ function MongoAdapter() {
       });
 
     });
+  }
+
+  function getMongooseModel(name) {
+    var promise = openConnection().then(function (db) {
+      mongo.db = db;
+      return mongoose.model(name);
+    }, function (db) {
+      throw 'connection error';
+      return db;
+    }).then(function(model) {
+      closeConnection();
+      return model;
+    });
+    return promise;
   }
 
   function closeConnection(){
