@@ -2,6 +2,8 @@
 
 var expect = require('chai').expect;
 var mongo = require('../../');
+var Entity =
+  require('../../node_modules/@back4app/back4app-entity').models.Entity;
 
 describe('index', function () {
 
@@ -21,9 +23,8 @@ describe('index', function () {
         }
       }
     });
-
-    mongo.registerEntity(person).then(function (schema) {
-      console.log(new PersonModel({
+    mongo.registerEntity(Person).then(function (schema) {
+      console.log(new schema({
         name: 'John'
       }));
       done();

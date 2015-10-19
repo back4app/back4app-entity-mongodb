@@ -2,6 +2,8 @@
 
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
+var Type =
+  require('../../../node_modules/@back4app/back4app-entity').models.attributes.types;
 
 module.exports = new SchemaBuilder();
 
@@ -14,51 +16,44 @@ function SchemaBuilder () {
   this.buildModel = buildModel;
 
   function buildModel(entity) {
-    this.name = entity.name;
     var schemaObj = {};
     for (var attr in entity.attributes) {
       var attrObj = entity.attributes[attr];
       var type = {};
 
-      if(attrObj.multiplicity.indexOf('*') !== -1) {
+      if (attrObj.multiplicity.indexOf('*') !== -1) {
         type.type = [getSchemaType(attrObj.type)];
       } else {
         type.type = getSchemaType(attrObj.type);
       }
 
-      if(attrObj.multiplicity.indexOf('1') !== 0) {
+      if (attrObj.multiplicity.indexOf('1') !== 0) {
         type.required = true;
       }
 
-      if(attrObj.default) {
+      if (attrObj.default) {
         type.default = attrObj.default;
       }
 
       schemaObj[attrObj.name] = type;
-
-      console.log(schemaObj);
-      var schema = new Schema(schemaObj);
-      var Model = mongoose.model(this.name, schema);
-
-      return Model;
     }
-
+    var schema = new Schema(schemaObj);
+    var Model = mongoose.model(entity.name, schema);
+    return Model;
 
   }
 
-  function getSchemaType(string) {
-    switch(string.toLowerCase()) {
-      case 'object':
+  function getSchemaType(type) {
+    switch(typeof type) {
+      case Type.ObjectAttribute:
         return Object;
-      case 'boolean':
+      case Type.BooleanAttribute:
         return Boolean;
-      case 'datetime':
+      case Type.DateAttribute:
         return Date;
-      case 'integer':
+      case Type.NumberAttribute:
         return Number;
-      case 'real':
-        return Number;
-      case 'string':
+      case Type.StringAttribute:
         return String;
       default:
         return Schema.Types.ObjectId;
