@@ -18,8 +18,10 @@ function MongoAdapter() {
     var promise = openConnection().then(function (db) {
       mongo.db = db;
       mongo.entitySchema = Schema.buildModel(entity);
+      return mongo.entitySchema;
     }, function (db) {
       console.log('error error error');
+      return db;
     }).then(function() {
       closeConnection();
       return mongo.entitySchema;
@@ -31,17 +33,19 @@ function MongoAdapter() {
     return new Promise(function(resolve, reject) {
       mongoose.connect('mongodb://localhost/test');
       var db = mongoose.connection;
-      db.on('open', function() {
+      db.once('open', function(callback) {
         resolve(db);
+        return db;
       });
       db.on('error', function() {
         reject(db);
       });
+
     });
   }
 
   function closeConnection(){
-    mongo.db.disconnect(function() {
+    mongoose.disconnect(function() {
       mongo.db = null;
     });
   }
