@@ -24,6 +24,7 @@ describe('index', function () {
 
   it('expect to create new entity', function () {
     var Person = Entity.specify({
+      name: 'Person',
       attributes: {
         name: {
           type: 'String',

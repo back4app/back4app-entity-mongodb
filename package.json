@@ -37,7 +37,7 @@
     "mocha": "^2.3.3"
   },
   "dependencies": {
-    "@back4app/back4app-entity": "^1.0.1",
+    "@back4app/back4app-entity": "^1.0.3",
     "mongoose": "^4.1.11"
   }
 }
