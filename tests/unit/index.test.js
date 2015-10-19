@@ -66,5 +66,5 @@ describe('index', function () {
     console.log(new PersonModel({
       name: 'John'
     }));
-
+  });
 });
