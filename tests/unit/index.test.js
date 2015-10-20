@@ -4,7 +4,7 @@ var expect = require('chai').expect;
 var mongoose = require('mongoose');
 var Entity = require('@back4app/back4app-entity').models.Entity;
 var Schema = require('../../src/back/models/schema');
-var mongo = require('../../');
+var Adapter = require('../../');
 
 describe('index', function () {
   var db;
@@ -72,6 +72,7 @@ describe('index', function () {
 
   it.skip('expect to create new schema, using mongoDB adapter',
     function (done) {
+      var mongo = Adapter();
       var Person = Entity.specify({
         name: 'Person',
         attributes: {

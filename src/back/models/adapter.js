@@ -14,8 +14,11 @@ module.exports = MongoAdapter;
  * @example
  * module.exports = MongoAdapter;
  */
-function MongoAdapter() {
+function MongoAdapter(host, port) {
   var mongo = new GenericAdapter();
+  mongo.config = {};
+  mongo.config.host = host;
+  mongo.config.port = port;
 
   mongo.db = null;
   mongo.entitySchema = null;
@@ -73,7 +76,12 @@ function MongoAdapter() {
    */
   function openConnection() {
     return new Promise(function (resolve, reject) {
-      mongoose.connect('mongodb://localhost/test');
+      var uri = 'mongodb://';
+      uri += mongo.config.host || 'localhost';
+      uri += mongo.config.port ? ':' + mongo.config.port : '';
+      uri += '/test';
+      console.log(uri);
+      mongoose.connect(uri);
       var db = mongoose.connection;
       db.once('open', function () {
         resolve(db);
