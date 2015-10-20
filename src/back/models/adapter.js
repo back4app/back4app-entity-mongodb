@@ -80,7 +80,6 @@ function MongoAdapter(host, port) {
       uri += mongo.config.host || 'localhost';
       uri += mongo.config.port ? ':' + mongo.config.port : '';
       uri += '/test';
-      console.log(uri);
       mongoose.connect(uri);
       var db = mongoose.connection;
       db.once('open', function () {
