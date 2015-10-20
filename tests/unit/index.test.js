@@ -72,7 +72,7 @@ describe('index', function () {
 
   it.skip('expect to create new schema, using mongoDB adapter',
     function (done) {
-      var mongo = Adapter();
+      var mongo = new Adapter();
       var Person = Entity.specify({
         name: 'Person',
         attributes: {

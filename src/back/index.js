@@ -1,3 +1,3 @@
 var MongoAdapter = require('./models/adapter');
 
-module.exports = MongoAdapter
+module.exports = MongoAdapter;
