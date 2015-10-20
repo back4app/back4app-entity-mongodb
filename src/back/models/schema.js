@@ -2,19 +2,31 @@
 
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
-var Type =
-  require('../../../node_modules/@back4app/back4app-entity').models.attributes.types;
 
 module.exports = new SchemaBuilder();
 
-function SchemaBuilder () {
-
-  this.name = null;
-  this.entity = null;
-  this.mongoSchema = null;
-
+/**
+ * Class that handles the Mongoose Schema creation.
+ * @constructor
+ * @memberof module:back4app/entity-mongodb/models
+ * @example
+ * module.exports = new SchemaBuilder();
+ */
+function SchemaBuilder() {
   this.buildModel = buildModel;
 
+  /**
+   * Returns the Model and registers the Schema within mongoose, using
+   * the passed entity.
+   * @name module:back4app/entity-mongodb/models/SchemaBuilder~buildModel
+   * @function
+   * @param {!module:back4app/entity/models/Entity}
+   * entity Entity instance containing properties that shall become
+   * the Schema properties.
+   * @returns {module:mongoose/Model} The Mongoose Model based on Entity.
+   * @example
+   * schema.buildModel(Person);
+   */
   function buildModel(entity) {
     var schemaObj = {};
     for (var attr in entity.attributes) {
@@ -43,8 +55,19 @@ function SchemaBuilder () {
 
   }
 
+  /**
+   * Returns SchemaType based on AttributeType function from Entity Attribute.
+   * @name module:back4app/entity-mongodb/models/SchemaBuilder~getSchemaType
+   * @function
+   * @private
+   * @param {!function} AttributeType function that contains the type of
+   * an attribute.
+   * @returns {!object} SchemaType to be used to generate the Model.
+   * @example
+   * type.type = getSchemaType(attrObj.type);
+   */
   function getSchemaType(type) {
-    switch(type.name) {
+    switch (type.name) {
       case 'ObjectAttribute':
         return Object;
       case 'BooleanAttribute':

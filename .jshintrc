@@ -23,6 +23,7 @@
     "global": false,
     "alert": false,
     "requirejs": false,
+    "Promise": false,
 
     // global for tests
     "it": false,
