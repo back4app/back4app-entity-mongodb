@@ -23,6 +23,7 @@ function MongoAdapter(host, port) {
 
   mongo.openConnection = openConnection;
   mongo.closeConnection = closeConnection;
+  mongo.instanceToJSON = instanceToJSON;
 
   /**
    * Connects the mongoose with the targeted Mongo database.
@@ -68,6 +69,19 @@ function MongoAdapter(host, port) {
   function closeConnection() {
     mongo.db.close();
     mongo.db = null;
+  }
+
+  function instanceToJSON(instance) {
+    var json = {};
+    for(var key in instance.Entity.attributes){
+      json[key] = instance[key];
+    }
+
+    if (instance.id) {
+      json['_id'] = instance.id;
+    }
+
+    return json;
   }
 
   return mongo;
