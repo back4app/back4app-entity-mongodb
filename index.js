@@ -1,3 +1,3 @@
-var adapter = require('./src/back');
+var Adapter = require('./src/back');
 
-module.exports = adapter;
+module.exports = Adapter;
