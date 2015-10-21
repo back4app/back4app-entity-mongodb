@@ -1,6 +1,5 @@
 'use strict';
 
-var path = require('path');
 var gulp = require('gulp');
 var gulpConfig = require('./gulp.config.json');
 var paths = gulpConfig.paths;
@@ -9,6 +8,35 @@ var jscs = require('gulp-jscs');
 var stylish = require('gulp-jscs-stylish');
 var mocha = require('gulp-mocha');
 var exec = require('child_process').exec;
+
+/**
+ * The default task (called when you run `gulp` from cli)
+ */
+gulp.task('default', ['test']);
+
+/**
+ * Task to run complete test for deployment
+ */
+gulp.task('test', ['dist', 'test-js', 'docs']);
+
+/**
+ * Task to generate dist build
+ */
+gulp.task('dist', ['clean:dist'], function () {
+  // dummy dist task
+});
+
+/**
+ * Task to clean dist folder
+ */
+gulp.task('clean:dist', function () {
+  // dummy clean:dist task
+});
+
+/**
+ * Task to run all linters and tests
+ */
+gulp.task('test-js', ['lint', 'mocha']);
 
 /**
  * Task to run link checks
@@ -38,23 +66,12 @@ gulp.task('mocha', function () {
 /**
  * Task to create docs
  */
-gulp.task('docs', function () {
-  docs();
-});
-
-function docs() {
-  backdocs();
-  guideDocs();
-}
+gulp.task('docs', ['docs:back', 'docs:guide']);
 
 /**
  * Task to create back docs
  */
-gulp.task('backdocs', function () {
-  return backdocs();
-});
-
-function backdocs() {
+gulp.task('docs:back', function () {
   exec(
     './node_modules/jsdoc/jsdoc.js ' +
     '-d ' + paths.backDocsDist + ' ' +
@@ -65,16 +82,12 @@ function backdocs() {
       console.log(stderr);
     }
   );
-}
+});
 
 /**
  * Task to create guide docs
  */
-gulp.task('guidedocs', function () {
-  return guideDocs();
-});
-
-function guideDocs() {
+gulp.task('docs:guide', function () {
   exec(
     './node_modules/jsdoc/jsdoc.js ' +
     '-u ' + paths.guideDocsSrc + ' ' +
@@ -85,4 +98,4 @@ function guideDocs() {
       console.log(stderr);
     }
   );
-}
+});

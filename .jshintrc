@@ -29,6 +29,7 @@
     "beforeEach": false,
     "describe": false,
     "before": false,
+    "after": false,
     "context": false
   }
 }

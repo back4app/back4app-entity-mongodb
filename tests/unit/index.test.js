@@ -2,8 +2,7 @@
 
 var expect = require('chai').expect;
 var mongoose = require('mongoose');
-var Entity =
-  require('../../node_modules/@back4app/back4app-entity').models.Entity;
+var Entity = require('@back4app/back4app-entity').models.Entity;
 
 describe('index', function () {
   var db;
@@ -11,6 +10,10 @@ describe('index', function () {
   before(function () {
     mongoose.connect('mongodb://localhost/test');
     db = mongoose.connection;
+  });
+
+  after(function () {
+    mongoose.disconnect();
   });
 
   it('expect to connect with mongoose', function (done) {
@@ -21,6 +24,7 @@ describe('index', function () {
 
   it('expect to create new entity', function () {
     var Person = Entity.specify({
+      name: 'Person',
       attributes: {
         name: {
           type: 'String',
@@ -41,4 +45,3 @@ describe('index', function () {
   });
 
 });
-
