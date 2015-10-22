@@ -33,7 +33,7 @@ describe('index', function () {
     function (done) {
       var mongo = new Adapter();
       settings.ADAPTERS.default = mongo;
-      var Person = Entity.specify({
+      Entity.specify({
         name: 'Person',
         attributes: {
           name: {
@@ -50,15 +50,16 @@ describe('index', function () {
       });
       mongo.openConnection().then(function () {
         mongo.db.collection('restaurants')
-          .insertOne( {
-          "borough" : "Manhattan",
-          "cuisine" : "Italian"
-        }, function(err, result) {
-            expect(err).to.be.null;
-          done()
-        });
+          .insertOne(
+          {
+            'borough': 'Manhattan',
+            'cuisine': 'Italian'
+          },
+          function (err) {
+            expect(err).to.equal(null);
+            done();
+          }
+        );
       });
-
     });
-
 });

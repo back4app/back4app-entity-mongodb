@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@back4app/back4app-entity": "^1.0.4",
+    "bluebird": "^2.10.2",
     "mongodb": "^2.0.46"
   }
 }
