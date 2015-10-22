@@ -38,6 +38,6 @@
   },
   "dependencies": {
     "@back4app/back4app-entity": "^1.0.3",
-    "mongoose": "^4.1.11"
+    "mongodb": "^2.0.46"
   }
 }
