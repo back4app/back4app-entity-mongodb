@@ -112,8 +112,14 @@ function openConnection() {
             mongoAdapter.database = database;
             resolve();
           } else {
-            mongoAdapter.database = null;
-            reject(error);
+            if (database) {
+              database.close(function () {
+                reject(error);
+              });
+            } else {
+              mongoAdapter.database = null;
+              reject(error);
+            }
           }
         }
       );

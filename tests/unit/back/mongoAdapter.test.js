@@ -91,20 +91,7 @@ describe('MongoAdapter', function () {
       });
     });
 
-    it('expect to reject with wrong address', function (done) {
-      this.timeout(2000);
-      mongoAdapter = new MongoAdapter(
-        'mongodb://127.0.0.69:27017?connectTimeoutMS=1000'
-      );
-      var promise = mongoAdapter.openConnection();
-      expect(promise).to.be.an.instanceOf(Promisse);
-      promise.catch(function (error) {
-        expect(error).to.be.an.instanceOf(Error);
-        done();
-      });
-    });
-
-    it('expect to reject with wrong port', function (done) {
+    it('expect to reject with wrong connection', function (done) {
       this.timeout(2000);
       mongoAdapter = new MongoAdapter(
         'mongodb://127.0.0.1:6969?connectTimeoutMS=1000'
