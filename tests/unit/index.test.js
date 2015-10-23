@@ -24,8 +24,14 @@ describe('index', function () {
       }
     });
 
+
+
     var person = new Person();
     person.name = 'John';
+    person.id = 'Johsadoifasiudfn';
+
+    var mongo = new Adapter();
+
     expect(Person.methods.greeting.call(person), 'I am John');
   });
 
@@ -51,12 +57,54 @@ describe('index', function () {
       mongo.openConnection().then(function () {
         mongo.db.collection('restaurants')
           .insertOne( {
-          "borough" : "Manhattan",
-          "cuisine" : "Italian"
-        }, function(err, result) {
+            "borough" : "Manhattan",
+            "cuisine" : "Italian"
+          }, function(err, result) {
             expect(err).to.be.null;
-          done()
-        });
+            done()
+          });
+      });
+
+    });
+
+  //
+
+  it.only('expect to connect, using mongoDB adapter',
+    function (done) {
+      var mongo = new Adapter();
+      settings.ADAPTERS.default = mongo;
+      mongo.openConnection().then(function () {
+        //expect(mongo.db).to.be.null;
+        mongo.db.collection('authors')
+          .insertOne( {
+            '_id': 'test3',
+            'name': 'Ukrasad'
+          }, function(err, result) {
+            expect(err).to.be.null;
+
+            mongo.db.collection('books')
+              .insertOne( {
+                '_id': 'book3',
+                'title': 'Barubaru lululu',
+                'author': {
+                  '$ref': 'authors',
+                  '$id': 'test'
+                }
+              }, function(err, result) {
+                expect(err).to.be.null;
+
+                mongo.db.collection('books').find( )
+                  .toArray(function(err, doc) {
+                    expect(err).to.be.null;
+                    console.log(doc)
+                  });
+
+                done();
+
+              });
+
+          });
+
       });
 
     });
