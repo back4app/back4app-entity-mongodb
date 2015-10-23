@@ -1,3 +1,3 @@
-var Adapter = require('./src/back');
+var backIndex = require('./src/back');
 
-module.exports = Adapter;
+module.exports = backIndex;

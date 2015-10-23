@@ -6,4 +6,4 @@ var MongoAdapter = require('./MongoAdapter');
  */
 module.exports = {};
 
-module.exports = MongoAdapter;
+module.exports.MongoAdapter = MongoAdapter;

@@ -1,5 +1,6 @@
 'use strict';
 
+var expect = require('chai').expect;
 var Promise = require('bluebird');
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
@@ -54,14 +55,14 @@ classes.generalize(Adapter, MongoAdapter);
 
 MongoAdapter.prototype.openConnection = openConnection;
 MongoAdapter.prototype.closeConnection = closeConnection;
-MongoAdapter.prototype.instanceToJSON = instanceToJSON;
+//MongoAdapter.prototype.instanceToJSON = instanceToJSON;
 
 /**
  * Connects the adapter with the targeted Mongo database.
  * @name module:back4app-entity-mongodb.MongoAdapter#openConnection
  * @function
- * @returns {Promise.<null|Error>} Promise that returns null if succeed and
- * the Error if failed.
+ * @returns {Promise.<undefined|Error>} Promise that returns nothing if succeed
+ * and the Error if failed.
  * @example
  * mongoAdapter.openConnection()
  *   .then(function () {
@@ -80,31 +81,46 @@ function openConnection() {
     '(it has to be passed no arguments)'
   );
 
-  expect(mongoAdapter.connectionUrl).to.be.a(
-    'string',
-    'Property "connectionUrl" has to be valid to open a connection in a ' +
-    'MongoAdapter (it has to be a string)'
-  );
-
-  expect(mongoAdapter.connectionOptions).to.be.a(
-    'object',
-    'Property "connectionOptions" has to be valid to open a connection in a ' +
-    'MongoAdapter (it has to be an object)'
-  );
-
   return new Promise(function (resolve, reject) {
-    MongoClient.connect(
-      mongoAdapter.connectionUrl,
-      mongoAdapter.connectionOptions,
-      function (error, database) {
-        if (error === null && mongoAdapter.database) {
-          mongoAdapter.database = database;
-          resolve();
-        } else {
-          reject(error);
-        }
-      }
+    expect(mongoAdapter.database).to.equal(
+      null,
+      'The connection is already opened'
     );
+
+    expect(mongoAdapter.connectionUrl).to.be.a(
+      'string',
+      'Property "connectionUrl" has to be valid to open a connection in a ' +
+      'MongoAdapter (it has to be a string)'
+    );
+
+    if (mongoAdapter.connectionOptions) {
+      expect(mongoAdapter.connectionOptions).to.be.a(
+        'object',
+        'Property "connectionOptions" has to be valid to open a connection ' +
+        'in a MongoAdapter (it has to be an object)'
+      );
+    }
+
+    mongoAdapter.database = {};
+
+    try {
+      MongoClient.connect(
+        mongoAdapter.connectionUrl,
+        mongoAdapter.connectionOptions,
+        function (error, database) {
+          if (error === null && database) {
+            mongoAdapter.database = database;
+            resolve();
+          } else {
+            mongoAdapter.database = null;
+            reject(error);
+          }
+        }
+      );
+    } catch (e) {
+      mongoAdapter.database = null;
+      throw e;
+    }
   });
 }
 
@@ -112,7 +128,7 @@ function openConnection() {
  * Closes the current adapter' connection with MongoDB.
  * @name module:back4app-entity-mongodb.MongoAdapter#closeConnection
  * @function
- * @returns {Promise.<Object|Error>} Promise that returns a result Object if
+ * @returns {Promise.<undefined|Error>} Promise that returns nothing if
  * succeed and the Error if failed.
  * @example
  * mongoAdapter.closeConnection()
@@ -126,29 +142,46 @@ function openConnection() {
 function closeConnection() {
   var mongoAdapter = this;
 
-  if (mongoAdapter.db) {
-    expect(mongoAdapter.db).to.be.an(
+  expect(arguments).to.have.length(
+    0,
+    'Invalid arguments length when closing a connection in a MongoAdapter ' +
+    '(it has to be passed no arguments)'
+  );
+
+  return new Promise(function (resolve, reject) {
+    expect(mongoAdapter.database).to.not.equal(
+      null,
+      'The connection is already closed'
+    );
+
+    expect(mongoAdapter.database).to.be.an(
       'object',
-      'Property "db" has to be an object to be closed.'
+      'Property "database" has to be an object to be closed.'
     );
 
-    expect(mongoAdapter.db).to.respondTo(
+    expect(mongoAdapter.database).to.respondTo(
       'close',
-      'Property "db" has to be an object with a function called "close" ' +
-      'to be closed.'
+      'Property "database" has to be an object with a function called ' +
+      '"close" to be closed.'
     );
 
-    return new Promise(function (resolve, reject) {
-      this.mongoAdapter.close(function (error, result) {
-        if (error === null && result) {
-          mongoAdapter.db = null;
-          resolve(result);
+    var database = mongoAdapter.database;
+    mongoAdapter.database = null;
+
+    try {
+      database.close(function (error) {
+        if (error === null) {
+          resolve();
         } else {
+          mongoAdapter.database = database;
           reject(error);
         }
       });
-    });
-  }
+    } catch (e) {
+      mongoAdapter.database = database;
+      throw e;
+    }
+  });
 }
 
 //function instanceToJSON(instance) {
