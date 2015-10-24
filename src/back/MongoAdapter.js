@@ -53,9 +53,25 @@ function MongoAdapter(connectionUrl, connectionOptions) {
 
 classes.generalize(Adapter, MongoAdapter);
 
+MongoAdapter.prototype.loadAttribute = loadAttribute;
 MongoAdapter.prototype.openConnection = openConnection;
 MongoAdapter.prototype.closeConnection = closeConnection;
+MongoAdapter.prototype.insertObject = insertObject;
 //MongoAdapter.prototype.instanceToJSON = instanceToJSON;
+
+function loadAttribute(Entity, attribute) {
+  var dataName = attribute.getDataName(Entity.adapterName);
+
+  expect(dataName).to.not.match(
+    /^\$/,
+    'The dataName of an Attribute cannot start with "$" in a MongoAdapter'
+  );
+
+  expect(dataName).to.not.contain(
+    '.',
+    'The dataName of an Attribute cannot contain "." in a MongoAdapter'
+  );
+}
 
 /**
  * Connects the adapter with the targeted Mongo database.
@@ -189,6 +205,8 @@ function closeConnection() {
     }
   });
 }
+
+function insertObject() {}
 
 //function instanceToJSON(instance) {
 //  var json = {};
