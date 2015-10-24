@@ -17,7 +17,8 @@
     "backend",
     "data",
     "database",
-    "orm"
+    "orm",
+    "mongodb"
   ],
   "author": "BACK4APP SERVICOS DIGITAIS LTDA",
   "license": "Unlicense",
@@ -37,7 +38,8 @@
     "mocha": "^2.3.3"
   },
   "dependencies": {
-    "@back4app/back4app-entity": "^1.0.3",
-    "mongoose": "^4.1.11"
+    "@back4app/back4app-entity": "^1.0.4",
+    "bluebird": "^2.10.2",
+    "mongodb": "^2.0.46"
   }
 }

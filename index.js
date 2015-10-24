@@ -1,3 +1,3 @@
-var entityBack = require('./src/back');
+var backIndex = require('./src/back');
 
-module.exports = entityBack;
+module.exports = backIndex;
