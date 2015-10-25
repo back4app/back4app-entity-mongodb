@@ -334,7 +334,7 @@ describe('MongoAdapter', function () {
         });
     });
 
-    it('expect to work many times', function (done) {
+    it.skip('expect to work many times', function (done) {
       var total = 10;
       var counter = 0;
 
@@ -356,7 +356,18 @@ describe('MongoAdapter', function () {
           .getDatabase()
           .then(function (database) {
             expect(database).to.be.an.instanceOf(Db);
-            return database.collection('MongoAdapter#getDatabase');
+            return new Promise (function (resolve, reject) {
+              database.collection(
+                'MongoAdapter#getDatabase',
+                {
+                  strict: true
+                },
+                function (error, collection) {
+                  expect(error).to.equal(null);
+                  resolve(collection);
+                }
+              );
+            });
           })
           .then(function (collection) {
             expect(collection).to.be.an.instanceOf(Collection);
