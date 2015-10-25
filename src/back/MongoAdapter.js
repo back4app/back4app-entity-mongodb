@@ -31,10 +31,11 @@ module.exports = MongoAdapter;
 function MongoAdapter(connectionUrl, connectionOptions) {
   Adapter.call(this);
 
-  expect(arguments).to.have.length.below(
-    3,
+  expect(arguments).to.have.length.within(
+    1,
+    2,
     'Invalid arguments length when creating a new MongoAdapter ' +
-    '(it has to be passed less than 3 arguments)'
+    '(it has to be passed from 1 to 2 arguments)'
   );
 
   expect(connectionUrl).to.be.a(
@@ -69,7 +70,9 @@ function MongoAdapter(connectionUrl, connectionOptions) {
         resolve(_database);
       } else {
         _databasePromiseQueue.push({
-          resolve: resolve,
+          resolve: function (database) {
+            resolve(database);
+          },
           reject: reject
         });
 
@@ -94,8 +97,6 @@ function MongoAdapter(connectionUrl, connectionOptions) {
  *   });
    */
   function openConnection() {
-    var mongoAdapter = this;
-
     expect(arguments).to.have.length(
       0,
       'Invalid arguments length when opening a connection in a MongoAdapter ' +
@@ -117,8 +118,8 @@ function MongoAdapter(connectionUrl, connectionOptions) {
 
         try {
           MongoClient.connect(
-            mongoAdapter.connectionUrl,
-            mongoAdapter.connectionOptions,
+            connectionUrl,
+            connectionOptions,
             function (error, database) {
               _isConnecting = false;
 
@@ -213,7 +214,7 @@ function MongoAdapter(connectionUrl, connectionOptions) {
 
   function _processPromiseQueue(queue, func, arg) {
     while (queue.length > 0) {
-      queue.splice(0,1)[func](arg);
+      queue.splice(0,1)[0][func](arg);
     }
   }
 }

@@ -22,12 +22,23 @@ describe('MongoAdapter', function () {
   var mongoAdapter = null;
 
   it('expect to be instantiable', function () {
-    mongoAdapter = new MongoAdapter();
     mongoAdapter = new MongoAdapter('');
     mongoAdapter = new MongoAdapter('', {});
   });
 
   it('expect to not work with wrong arguments', function () {
+    expect(function () {
+      mongoAdapter = new MongoAdapter();
+    }).to.throw(AssertionError);
+
+    expect(function () {
+      mongoAdapter = new MongoAdapter({});
+    }).to.throw(AssertionError);
+
+    expect(function () {
+      mongoAdapter = new MongoAdapter('', function () {});
+    }).to.throw(AssertionError);
+
     expect(function () {
       mongoAdapter = new MongoAdapter('', {}, null);
     }).to.throw(AssertionError);
@@ -35,6 +46,8 @@ describe('MongoAdapter', function () {
 
   it('expect to be an instance of Adapter', function () {
     expect(classes.isGeneral(Adapter, MongoAdapter));
+
+    expect(mongoAdapter).to.be.an.instanceOf(Adapter);
   });
 
   describe('#openConnection', function () {
@@ -44,39 +57,17 @@ describe('MongoAdapter', function () {
       }).to.throw(AssertionError);
     });
 
-    it('expect to not work when in invalid state', function (done) {
-      mongoAdapter = new MongoAdapter();
-      mongoAdapter.openConnection()
-        .catch(function (error) {
-          expect(error).to.be.an.instanceOf(AssertionError);
-
-          mongoAdapter = new MongoAdapter({});
-          mongoAdapter.openConnection()
-            .catch(function (error) {
-              expect(error).to.be.an.instanceOf(AssertionError);
-
-              mongoAdapter = new MongoAdapter(
-                'mongodb://127.0.0.1:27017',
-                function () {}
-              );
-              mongoAdapter.openConnection()
-                .catch(function (error) {
-                  expect(error).to.be.an.instanceOf(AssertionError);
-                  done();
-                });
-            });
-        });
-    });
-
     it('expect to resolve with right connection', function (done) {
       var promise =  defaultAdapter.openConnection();
       expect(promise).to.be.an.instanceOf(Promisse);
-      promise.then(function (result) {
-        expect(result).to.be.an('undefined');
-        defaultAdapter.closeConnection().then(function () {
+      promise
+        .then(function (result) {
+          expect(result).to.be.an('undefined');
+          return defaultAdapter.closeConnection();
+        })
+        .then(function () {
           done();
         });
-      });
     });
 
     it('expect to reject with invalid parameters', function (done) {
@@ -104,24 +95,35 @@ describe('MongoAdapter', function () {
       });
     });
 
-    it('expect to not connect twice', function (done) {
-      defaultAdapter.openConnection().then(function () {
-        defaultAdapter.openConnection().catch(function (error) {
-          expect(error).to.be.an.instanceOf(AssertionError);
-          defaultAdapter.closeConnection().then(function () {
-            done();
-          });
-        });
-      });
-
-      defaultAdapter.openConnection()
+    it('expect to work if still opened', function (done) {
+      defaultAdapter
+        .openConnection()
         .then(function () {
-          throw new Error();
+          return defaultAdapter.openConnection();
         })
-        .catch(function (error) {
-          expect(error).to.be.an.instanceOf(AssertionError);
-        }
-      );
+        .then(function () {
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
+    });
+
+    it('expect to work if asked to open many times', function (done) {
+      var total = 10;
+      var counter = 0;
+
+      for (var i = 0; i < total; i++) {
+        defaultAdapter
+          .openConnection()
+          .then(function () {
+            return defaultAdapter.closeConnection();
+          })
+          .then(function () {
+            counter++;
+            if (counter === total) {
+              done();
+            }
+          });
+      }
     });
   });
 
@@ -132,30 +134,7 @@ describe('MongoAdapter', function () {
       }).to.throw(AssertionError);
     });
 
-    it('expect to not work when in invalid state', function (done) {
-      mongoAdapter = new MongoAdapter();
-      mongoAdapter.closeConnection()
-        .catch(function (error) {
-          expect(error).to.be.an.instanceOf(AssertionError);
-
-          mongoAdapter = new MongoAdapter();
-          mongoAdapter.database = function () {};
-          mongoAdapter.closeConnection()
-            .catch(function (error) {
-              expect(error).to.be.an.instanceOf(AssertionError);
-
-              mongoAdapter = new MongoAdapter();
-              mongoAdapter.database = {};
-              mongoAdapter.closeConnection()
-                .catch(function (error) {
-                  expect(error).to.be.an.instanceOf(AssertionError);
-                  done();
-                });
-            });
-        });
-    });
-
-    it('expect to resolve with valid state', function (done) {
+    it('expect to resolve', function (done) {
       defaultAdapter.openConnection().then(function () {
         var promise = defaultAdapter.closeConnection();
         expect(promise).to.be.an.instanceOf(Promisse);
@@ -166,23 +145,45 @@ describe('MongoAdapter', function () {
       });
     });
 
-    it('expect to not close twice', function (done) {
-      defaultAdapter.openConnection().then(function () {
-        defaultAdapter.closeConnection().then(function () {
-          defaultAdapter.closeConnection().catch(function (error) {
-            expect(error).to.be.an.instanceOf(AssertionError);
-            done();
-          });
-        });
+    it('expect to work if still opening', function (done) {
+      defaultAdapter
+        .openConnection();
 
-        defaultAdapter.closeConnection()
-          .then(function () {
-            throw new Error();
-          })
-          .catch(function (error) {
-            expect(error).to.be.an.instanceOf(AssertionError);
-          });
-      });
+      defaultAdapter
+        .closeConnection()
+        .then(done);
+    });
+
+    it('expect to work if still closed', function (done) {
+      defaultAdapter
+        .openConnection()
+        .then(function () {
+          return defaultAdapter.closeConnection();
+        })
+        .then(function () {
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
+    });
+
+    it('expect to work if asked to close many times', function (done) {
+      defaultAdapter
+        .openConnection()
+        .then(function () {
+          var total = 10;
+          var counter = 0;
+
+          for (var i = 0; i < total; i++) {
+            defaultAdapter
+              .closeConnection()
+              .then(function () {
+                counter++;
+                if (counter === total) {
+                  done();
+                }
+              });
+          }
+        });
     });
   });
 });
