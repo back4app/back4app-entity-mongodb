@@ -60,7 +60,9 @@ gulp.task('mocha', function () {
   return gulp.src(paths.mochaSrc, {read: false})
     .pipe(mocha({
       reporter: 'spec'
-    }));
+    })).once('end', function () {
+      process.exit();
+    });;
 });
 
 /**
