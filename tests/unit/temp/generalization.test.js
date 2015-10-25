@@ -2,20 +2,16 @@
  * Created by walkirya on 21/10/15.
  */
 
-//tests generalization strategy with mongo driver
-
 'use strict';
 
 var expect = require('chai').expect;
 var mongodb = require('mongodb');
 var Entity = require('@back4app/back4app-entity').models.Entity;
-var assert = require('assert');
 
 describe('generalization save strategy', function () {
   var db;
   var Vehicle;
   var Car;
-  var Bmw;
   var vehicleCollection;
   var carCollection;
 
@@ -30,7 +26,7 @@ describe('generalization save strategy', function () {
       done();
     });
 
-  });// TODO: entity sav
+  });
 
   after(function () {
     db.close();
@@ -38,63 +34,80 @@ describe('generalization save strategy', function () {
 
   beforeEach(function () {
     vehicleCollection.drop();//clean collection
-    carCollection.drop();//clean collection
+    carCollection.drop();//clan ecollection
   });
 
   it('expect to save subclass on its collection and its superclass collection ',
     function (done) {
 
-      var car = new Car({
-        id: '00000000-0000-4000-a000-000000000000',
-        regPlate: 'bbb-0000', type: 'carro', ar: true
-      });
-
-      // TODO: entity save
-      carCollection.insertOne({
-        _id: '00000000-0000-4000-a000-000000000000',
-        regPlate: 'bbb-0000', type: 'carro', ar: true
-      }, function (err, result) {
-        assert.equal(err, null);
-        assert.equal(1, result.result.n);
-        assert.equal(1, result.ops.length);
-        console.log("Inserted 1 car into the car collection");
-
-
-        vehicleCollection.insertOne({
-            _id: '00000000-0000-4000-a000-000000000000',
-            regPlate: 'bbb-0000', type: 'carro'
-          },
-          function (err, result) {
-            assert.equal(err, null);
-            assert.equal(1, result.result.n);
-            assert.equal(1, result.ops.length);
-            console.log("Inserted 1 car into the vehicle collection");
-
-            carCollection.find({_id: '00000000-0000-4000-a000-000000000000'}).toArray(
-              function (err, doc) {
-                assert.equal(null, err);
-                assert.equal('00000000-0000-4000-a000-000000000000', doc[0]._id);
-
-                carCollection.find({}).toArray(function (err, items) {
-                  assert.equal(null, err);
-                  assert.equal(1, items.length);
-
-                  vehicleCollection.find({_id: '00000000-0000-4000-a000-000000000000'}).toArray(
-                    function (err, doc) {
-                      assert.equal(null, err);
-                      assert.equal('00000000-0000-4000-a000-000000000000', doc[0]._id);
-
-                      vehicleCollection.find({}).toArray(function (err, items) {
-                        assert.equal(null, err);
-                        assert.equal(1, items.length);
-                        done();
-                      });
-                    });
-                });
-              });
-          });
+    // TODO: entity save
+    carCollection
+      .insertOne({
+        _id: '00000000-0000-4000-a000-000000000000', air: true
+      })
+      .then(function () {
+        return vehicleCollection.insertOne({
+          _id: '00000000-0000-4000-a000-000000000000',
+          regPlate: 'bbb-0000', type: 'carro'
+      })
+      .then(function () {
+        return carCollection.find({_id: '00000000-0000-4000-a000-000000000000'})
+          .toArray()
+      })
+      .then(function (docs) {
+        expect(docs[0]._id).to.equal('00000000-0000-4000-a000-000000000000');
+        expect(docs.length).to.equal(1);
+      })
+      .then(function () {
+        return vehicleCollection.find({_id: '00000000-0000-4000-a000-000000000000'})
+        .toArray()
+      })
+      .then(function (docs) {
+        expect(docs[0]._id).to.equal('00000000-0000-4000-a000-000000000000');
+        expect(docs.length).to.equal(1);
+      })
+      .then(function () {
+        return carCollection.find({}).toArray();
+      })    
+      .then(function (docs) {
+        expect(docs.length).to.equal(1);
+      })
+      .then(function () {
+        return vehicleCollection.find({}).toArray();
+      })    
+      .then(function (docs) {
+        expect(docs.length).to.equal(1);
+      })
+      .then(function () {
+        return carCollection.insertMany([
+          {_id: '00000000-0000-4000-a000-000000000011',air: true},
+          {_id: '00000000-0000-4000-a000-000000000022',air: false}])
+      })
+      .then(function () {
+        return vehicleCollection.insertMany([
+          {_id: '00000000-0000-4000-a000-000000000011',regPlate: 'aaa-011', type: 'car'},
+          {_id: '00000000-0000-4000-a000-000000000022',regPlate: 'aaa-022', type: 'car'}])
+      })
+      .then(function () {
+        return carCollection.find({}).toArray();
+      })    
+      .then(function (docs) {
+        expect(docs.length).to.equal(3);
+      })
+      .then(function () {
+        return vehicleCollection.find({}).toArray();
+      })    
+      .then(function (docs) {
+        expect(docs.length).to.equal(3);
+      })
+      .then(function () {
+        done();
+      })
+      .catch(function (err) {
+        console.log(err);
       });
     });
+  });
 });
 
 describe('generalization delete strategy', function () {
@@ -124,8 +137,8 @@ describe('generalization delete strategy', function () {
   });
 
   beforeEach(function (done) {
-    vehicleCollection.drop();//clean collection
-    carCollection.drop();//clean collection
+    vehicleCollection.drop();
+    carCollection.drop();
     bmwCollection.drop();
 
     //TODO: save
@@ -133,24 +146,15 @@ describe('generalization delete strategy', function () {
       .insertMany([
         {_id: '00000000-0000-4000-a000-000000000000',leatherSeat: true},
         {_id: '00000000-0000-4000-a000-000000000011',leatherSeat: true}])
-      .then(function(r) {
-        assert.equal(2, r.insertedCount);
-      })
       .then (function () {
       return carCollection.insertMany([
-        {_id: '00000000-0000-4000-a000-000000000000', ar: true},
-        {_id: '00000000-0000-4000-a000-000000000011', ar: false}])
-        .then(function(r) {
-          assert.equal(2, r.insertedCount);
-        })
+        {_id: '00000000-0000-4000-a000-000000000000', air: true},
+        {_id: '00000000-0000-4000-a000-000000000011', air: false}])
       })
       .then (function () {
       return vehicleCollection.insertMany([
         {_id: '00000000-0000-4000-a000-000000000000', regPlate: 'bmw-0000', type: 'bmw'},
         {_id: '00000000-0000-4000-a000-000000000011', regPlate: 'bmw-0001', type: 'bmw'}])
-        .then(function(r) {
-          assert.equal(2, r.insertedCount);
-        })
       })
       .then (function () {
         done();
@@ -166,43 +170,31 @@ describe('generalization delete strategy', function () {
       ////TODO: find and delete
       bmwCollection
         .findOneAndDelete({_id: '00000000-0000-4000-a000-000000000000'})
-        .then(function(r) {
-          assert.equal('00000000-0000-4000-a000-000000000000', r.value._id);
-          assert.equal(1, r.lastErrorObject.n);
-        })
         .then(function () {
           return bmwCollection.find({}).toArray();
         })
         .then (function (docs) {
-          assert.equal(0, docs.length);
+          expect(docs.length).to.equal(1);
         })
         .then(function () {
           return carCollection
             .findOneAndDelete({_id: '00000000-0000-4000-a000-000000000000'})
         })
-        .then(function(r) {
-          assert.equal('00000000-0000-4000-a000-000000000000', r.value._id);
-          assert.equal(1, r.lastErrorObject.n);
-        })
         .then(function () {
           return carCollection.find({}).toArray();
         })
         .then (function (docs) {
-          assert.equal(0, docs.length);
+          expect(docs.length).to.equal(1);
         })
         .then(function () {
           return vehicleCollection
             .findOneAndDelete({_id: '00000000-0000-4000-a000-000000000000'})
         })
-        .then(function(r) {
-          assert.equal('00000000-0000-4000-a000-000000000000', r.value._id);
-          assert.equal(1, r.lastErrorObject.n);
-        })
         .then(function () {
           return vehicleCollection.find({}).toArray();
         })
         .then (function (docs) {
-        assert.equal(0, docs.length);
+          expect(docs.length).to.equal(1);
         })
         .then (function () {
           done();
@@ -214,7 +206,7 @@ describe('generalization delete strategy', function () {
   });
 });
 
-describe.only('generalization update strategy', function () {
+describe('generalization update strategy', function () {
   var db;
   var vehicleCollection;
   var carCollection;
@@ -233,33 +225,24 @@ describe.only('generalization update strategy', function () {
   });
 
   beforeEach(function (done) {
-    vehicleCollection.drop();//clean collection
-    carCollection.drop();//clean collection
+    vehicleCollection.drop();
+    carCollection.drop();
     bmwCollection.drop();
 
     //TODO: save
     bmwCollection
       .insertMany([
         {_id: '00000000-0000-4000-a000-000000000000',leatherSeat: true},
-        {_id: '00000000-0000-4000-a000-000000000011',leatherSeat: true}])
-        .then(function(r) {
-          assert.equal(2, r.insertedCount);
-        })
+        {_id: '00000000-0000-4000-a000-000000000011',leatherSeat: false}])
       .then (function () {
         return carCollection.insertMany([
-          {_id: '00000000-0000-4000-a000-000000000000', ar: true},
-          {_id: '00000000-0000-4000-a000-000000000011', ar: false}])
-          .then(function(r) {
-            assert.equal(2, r.insertedCount);
-          })
+          {_id: '00000000-0000-4000-a000-000000000000', air: true},
+          {_id: '00000000-0000-4000-a000-000000000011', air: false}])
       })
       .then (function () {
         return vehicleCollection.insertMany([
           {_id: '00000000-0000-4000-a000-000000000000', regPlate: 'bmw-0000', type: 'bmw'},
-          {_id: '00000000-0000-4000-a000-000000000011', regPlate: 'bmw-0001', type: 'bmw'}])
-          .then(function(r) {
-            assert.equal(2, r.insertedCount);
-          })
+          {_id: '00000000-0000-4000-a000-000000000011', regPlate: 'bmw-0001', type: 'bmw'}])  
       })
       .then (function () {
         done();
@@ -269,30 +252,16 @@ describe.only('generalization update strategy', function () {
       });
   });
 
-  it.only('expect to find one vehicle and update', function (done) {
+  it('expect to find a superclass and update', function (done) {
     vehicleCollection
       .findOneAndUpdate({"regPlate": "bmw-0001", "type": "bmw"},
         {$set: {regPlate: 'bmw-0002'}}, {returnOriginal: false})
       .then(function () {
         return vehicleCollection
           .find({_id: '00000000-0000-4000-a000-000000000011'}).toArray()
-            .then(function(docs){
-              assert.equal('bmw-0002', docs[0].regPlate);
-          })
       })
-      .then(function () {
-        return carCollection
-          .find({_id: '00000000-0000-4000-a000-000000000011'}).toArray()
-          .then(function(docs){
-            assert.equal(false, docs[0].ar);
-          })
-      })
-      .then(function () {
-        return bmwCollection
-          .find({_id: '00000000-0000-4000-a000-000000000011'}).toArray()
-          .then(function(docs){
-            assert.equal(true, docs[0].leatherSeat);
-          })
+      .then(function(docs){
+        expect(docs[0].regPlate).to.equal('bmw-0002');
       })
       .then (function () {
         done();
@@ -301,10 +270,23 @@ describe.only('generalization update strategy', function () {
         console.log(err);
       });
   });
-
-
-  it('expect to find many and update it', function () {
-
+  
+  it('expects to find a subclass and update', function (done) {
+    bmwCollection
+      .findOneAndUpdate({leatherSeat: false},
+        {$set: {leatherSeat: true}}, {returnOriginal: false})
+      .then(function () {
+        return bmwCollection
+        .find({_id: '00000000-0000-4000-a000-000000000011'}).toArray()
+      })
+      .then(function(docs){
+        expect(docs[0].leatherSeat).to.equal(true);
+      })
+      .then (function () {
+        done();
+      })
+      .catch(function (err) {
+        console.log(err);
+      });
   });
-
 });
