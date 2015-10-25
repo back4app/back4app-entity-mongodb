@@ -32,8 +32,8 @@ function MongoAdapter(connectionUrl, connectionOptions) {
   Adapter.call(this);
 
   var _database = null;
-  var _databasePromiseQueue = [];
-  var _isConnecting = false;
+  var _databaseIsLocked = false;
+  var _databaseRequestQueue = [];
 
   this.getDatabase = getDatabase;
   this.openConnection = openConnection;
@@ -72,17 +72,17 @@ function MongoAdapter(connectionUrl, connectionOptions) {
     );
 
     return new Promise(function (resolve, reject) {
-      if (_database) {
-        resolve(_database);
+      if (_databaseIsLocked || !_database) {
+        mongoAdapter
+          .openConnection()
+          .then(function () {
+            resolve(_database);
+          })
+          .catch(function (error) {
+            reject(error);
+          });
       } else {
-        _databasePromiseQueue.push({
-          resolve: function (database) {
-            resolve(database);
-          },
-          reject: reject
-        });
-
-        mongoAdapter.openConnection();
+        resolve(_database);
       }
     });
   }
@@ -110,38 +110,27 @@ function MongoAdapter(connectionUrl, connectionOptions) {
     );
 
     return new Promise(function (resolve, reject) {
-      if (_database) {
-        resolve();
-      } else if (_isConnecting) {
-        _databasePromiseQueue.push({
-          resolve: function () {
-            resolve();
-          },
-          reject: reject
+      if (_databaseIsLocked) {
+        _databaseRequestQueue.push(function () {
+          openConnection().then(resolve).catch(reject);
         });
+      } else if (_database) {
+        resolve();
       } else {
-        _isConnecting = true;
+        _databaseIsLocked = true;
 
         MongoClient
-          .connect(connectionUrl,connectionOptions)
+          .connect(connectionUrl, connectionOptions)
           .then(function (database) {
-            _isConnecting = false;
+            _databaseIsLocked = false;
             _database = database;
             resolve();
-            _processPromiseQueue(
-              _databasePromiseQueue,
-              'resolve',
-              database
-            );
+            _processDatabaseRequestQueue();
           })
           .catch(function (error) {
-            _isConnecting = false;
+            _databaseIsLocked = false;
             reject(error);
-            _processPromiseQueue(
-              _databasePromiseQueue,
-              'reject',
-              error
-            );
+            _processDatabaseRequestQueue();
           });
       }
     });
@@ -170,36 +159,36 @@ function MongoAdapter(connectionUrl, connectionOptions) {
     );
 
     return new Promise(function (resolve, reject) {
-      if (_isConnecting) {
-        _databasePromiseQueue.push({
-          resolve: function (database) {
-            database
-              .close()
-              .then(function () {
-                _database = null;
-                resolve();
-              })
-              .catch(reject);
-          },
-          reject: reject
+      if (_databaseIsLocked) {
+        _databaseRequestQueue.push(function () {
+          closeConnection()
+            .then(resolve)
+            .catch(reject);
         });
       } else if (!_database) {
         resolve();
       } else {
+        _databaseIsLocked = true;
         _database
           .close()
           .then(function () {
+            _databaseIsLocked = false;
             _database = null;
             resolve();
+            _processDatabaseRequestQueue();
           })
-          .catch(reject);
+          .catch(function (error) {
+            _databaseIsLocked = false;
+            reject(error);
+            _processDatabaseRequestQueue();
+          });
       }
     });
   }
 
-  function _processPromiseQueue(queue, func, arg) {
-    while (queue.length > 0) {
-      queue.splice(0,1)[0][func](arg);
+  function _processDatabaseRequestQueue() {
+    while (_databaseRequestQueue.length > 0) {
+      _databaseRequestQueue.splice(0,1)[0]();
     }
   }
 }
