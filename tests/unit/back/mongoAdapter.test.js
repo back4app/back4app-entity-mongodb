@@ -333,5 +333,52 @@ describe('MongoAdapter', function () {
             .then(done);
         });
     });
+
+    it('expect to work many times', function (done) {
+      var total = 10;
+      var counter = 0;
+
+      defaultAdapter
+        .getDatabase()
+        .then(function (database) {
+          expect(database).to.be.an.instanceOf(Db);
+          return database.createCollection('MongoAdapter#getDatabase');
+        })
+        .then(function (collection) {
+          expect(collection).to.be.an.instanceOf(Collection);
+          for (var i = 0; i < total; i++) {
+            work();
+          }
+        });
+
+      function work() {
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            expect(database).to.be.an.instanceOf(Db);
+            return database.collection('MongoAdapter#getDatabase');
+          })
+          .then(function (collection) {
+            expect(collection).to.be.an.instanceOf(Collection);
+            return defaultAdapter.closeConnection();
+          })
+          .then(function () {
+            counter++;
+            if (counter === total) {
+              defaultAdapter
+                .getDatabase()
+                .then(function (database) {
+                  expect(database).to.be.an.instanceOf(Db);
+                  return database.dropCollection('MongoAdapter#getDatabase');
+                })
+                .then(function (result) {
+                  expect(result).to.equal(true);
+                  return defaultAdapter.closeConnection();
+                })
+                .then(done);
+            }
+          });
+      }
+    });
   });
 });
