@@ -7,8 +7,11 @@
 var chai = require('chai');
 var expect = chai.expect;
 var AssertionError = chai.AssertionError;
-var Promisse = require('bluebird');
-var MongoError = require('mongodb').MongoError;
+var Promise = require('bluebird');
+var mongodb = require('mongodb');
+var MongoError = mongodb.MongoError;
+var Db = mongodb.Db;
+var Collection = mongodb.Collection;
 var entity = require('@back4app/back4app-entity');
 var settings = entity.settings;
 var classes = entity.utils.classes;
@@ -60,15 +63,13 @@ describe('MongoAdapter', function () {
 
     it('expect to resolve with right connection', function (done) {
       var promise =  defaultAdapter.openConnection();
-      expect(promise).to.be.an.instanceOf(Promisse);
+      expect(promise).to.be.an.instanceOf(Promise);
       promise
         .then(function (result) {
           expect(result).to.be.an('undefined');
           return defaultAdapter.closeConnection();
         })
-        .then(function () {
-          done();
-        });
+        .then(done);
     });
 
     it('expect to reject with invalid parameters', function (done) {
@@ -76,7 +77,7 @@ describe('MongoAdapter', function () {
         '', {}
       );
       var promise = mongoAdapter.openConnection();
-      expect(promise).to.be.an.instanceOf(Promisse);
+      expect(promise).to.be.an.instanceOf(Promise);
       promise.catch(function (error) {
         expect(error).to.be.an.instanceOf(Error);
         done();
@@ -89,7 +90,7 @@ describe('MongoAdapter', function () {
         'mongodb://127.0.0.1:6969?connectTimeoutMS=1000'
       );
       var promise = mongoAdapter.openConnection();
-      expect(promise).to.be.an.instanceOf(Promisse);
+      expect(promise).to.be.an.instanceOf(Promise);
       promise.catch(function (error) {
         expect(error).to.be.an.instanceOf(MongoError);
         done();
@@ -142,7 +143,7 @@ describe('MongoAdapter', function () {
     it('expect to resolve', function (done) {
       defaultAdapter.openConnection().then(function () {
         var promise = defaultAdapter.closeConnection();
-        expect(promise).to.be.an.instanceOf(Promisse);
+        expect(promise).to.be.an.instanceOf(Promise);
         promise.then(function (result) {
           expect(result).to.be.an('undefined');
           done();
@@ -193,6 +194,33 @@ describe('MongoAdapter', function () {
               });
           }
         });
+    });
+  });
+
+  describe('#getDatabase', function () {
+    it('expect to not work with wrong arguments', function () {
+      expect(function () {
+        defaultAdapter.getDatabase(null);
+      }).to.throw(AssertionError);
+    });
+
+    it('expect to work with right arguments', function (done) {
+      var promise = defaultAdapter.getDatabase();
+      expect(promise).to.be.an.instanceOf(Promise);
+      promise
+        .then(function (database) {
+          expect(database).to.be.an.instanceOf(Db);
+          return database.createCollection('MongoAdapter#getDatabase');
+        })
+        .then(function (collection) {
+          expect(collection).to.be.an.instanceOf(Collection);
+          return collection.drop();
+        })
+        .then(function (result) {
+          expect(result).to.equal(true);
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
     });
   });
 });

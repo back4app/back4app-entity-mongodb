@@ -31,6 +31,14 @@ module.exports = MongoAdapter;
 function MongoAdapter(connectionUrl, connectionOptions) {
   Adapter.call(this);
 
+  var _database = null;
+  var _databasePromiseQueue = [];
+  var _isConnecting = false;
+
+  this.getDatabase = getDatabase;
+  this.openConnection = openConnection;
+  this.closeConnection = closeConnection;
+
   expect(arguments).to.have.length.within(
     1,
     2,
@@ -54,16 +62,14 @@ function MongoAdapter(connectionUrl, connectionOptions) {
     connectionOptions = null;
   }
 
-  var _database = null;
-  var _databasePromiseQueue = [];
-  var _isConnecting = false;
-
-  this.getDatabase = getDatabase;
-  this.openConnection = openConnection;
-  this.closeConnection = closeConnection;
-
   function getDatabase() {
     var mongoAdapter = this;
+
+    expect(arguments).to.have.length(
+      0,
+      'Invalid arguments length when getting a database in a MongoAdapter ' +
+      '(it has to be passed no arguments)'
+    );
 
     return new Promise(function (resolve, reject) {
       if (_database) {
