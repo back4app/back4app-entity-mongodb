@@ -8,6 +8,7 @@ var chai = require('chai');
 var expect = chai.expect;
 var AssertionError = chai.AssertionError;
 var Promisse = require('bluebird');
+var MongoError = require('mongodb').MongoError;
 var entity = require('@back4app/back4app-entity');
 var settings = entity.settings;
 var classes = entity.utils.classes;
@@ -90,7 +91,7 @@ describe('MongoAdapter', function () {
       var promise = mongoAdapter.openConnection();
       expect(promise).to.be.an.instanceOf(Promisse);
       promise.catch(function (error) {
-        expect(error).to.be.an.instanceOf(Error);
+        expect(error).to.be.an.instanceOf(MongoError);
         done();
       });
     });
@@ -112,6 +113,10 @@ describe('MongoAdapter', function () {
       var counter = 0;
 
       for (var i = 0; i < total; i++) {
+        open();
+      }
+
+      function open() {
         defaultAdapter
           .openConnection()
           .then(function () {
@@ -174,6 +179,10 @@ describe('MongoAdapter', function () {
           var counter = 0;
 
           for (var i = 0; i < total; i++) {
+            close();
+          }
+
+          function close() {
             defaultAdapter
               .closeConnection()
               .then(function () {

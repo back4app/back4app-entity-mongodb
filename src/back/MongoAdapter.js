@@ -116,46 +116,27 @@ function MongoAdapter(connectionUrl, connectionOptions) {
       } else {
         _isConnecting = true;
 
-        try {
-          MongoClient.connect(
-            connectionUrl,
-            connectionOptions,
-            function (error, database) {
-              _isConnecting = false;
-
-              if (error === null && database) {
-                _database = database;
-                resolve();
-                _processPromiseQueue(
-                  _databasePromiseQueue,
-                  'resolve',
-                  database
-                );
-              } else {
-                if (database) {
-                  database.close(function () {
-                    reject(error);
-                    _processPromiseQueue(
-                      _databasePromiseQueue,
-                      'reject',
-                      error
-                    );
-                  });
-                } else {
-                  reject(error);
-                  _processPromiseQueue(
-                    _databasePromiseQueue,
-                    'reject',
-                    error
-                  );
-                }
-              }
-            }
-          );
-        } catch (e) {
-          _isConnecting = false;
-          throw e;
-        }
+        MongoClient
+          .connect(connectionUrl,connectionOptions)
+          .then(function (database) {
+            _isConnecting = false;
+            _database = database;
+            resolve();
+            _processPromiseQueue(
+              _databasePromiseQueue,
+              'resolve',
+              database
+            );
+          })
+          .catch(function (error) {
+            _isConnecting = false;
+            reject(error);
+            _processPromiseQueue(
+              _databasePromiseQueue,
+              'reject',
+              error
+            );
+          });
       }
     });
   }
@@ -186,28 +167,26 @@ function MongoAdapter(connectionUrl, connectionOptions) {
       if (_isConnecting) {
         _databasePromiseQueue.push({
           resolve: function (database) {
-            database.close(function (error) {
-              if (error === null) {
+            database
+              .close()
+              .then(function () {
                 _database = null;
                 resolve();
-              } else {
-                reject(error);
-              }
-            });
+              })
+              .catch(reject);
           },
           reject: reject
         });
       } else if (!_database) {
         resolve();
       } else {
-        _database.close(function (error) {
-          if (error === null) {
+        _database
+          .close()
+          .then(function () {
             _database = null;
             resolve();
-          } else {
-            reject(error);
-          }
-        });
+          })
+          .catch(reject);
       }
     });
   }
@@ -239,7 +218,13 @@ function loadAttribute(Entity, attribute) {
   );
 }
 
-function insertObject() {}
+function insertObject() {
+  return this
+    .getDatabase()
+    .then(function (database) {
+      return database;
+    });
+}
 
 //function instanceToJSON(instance) {
 //  var json = {};
