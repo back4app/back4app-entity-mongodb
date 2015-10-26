@@ -356,7 +356,7 @@ describe('MongoAdapter', function () {
           .getDatabase()
           .then(function (database) {
             expect(database).to.be.an.instanceOf(Db);
-            return new Promise (function (resolve, reject) {
+            return new Promise(function (resolve) {
               database.collection(
                 'MongoAdapter#getDatabase',
                 {
