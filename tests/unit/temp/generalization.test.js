@@ -129,6 +129,9 @@ describe('generalization delete strategy', function () {
   });
 
   after(function () {
+    vehicleCollection.drop();
+    carCollection.drop();
+    bmwCollection.drop();
     db.close();
   });
 
@@ -221,6 +224,13 @@ describe('generalization update strategy', function () {
       bmwCollection = db.collection('Bmw');
       done();
     });
+  });
+
+  after(function () {
+    vehicleCollection.drop();
+    carCollection.drop();
+    bmwCollection.drop();
+    db.close();
   });
 
   beforeEach(function (done) {
