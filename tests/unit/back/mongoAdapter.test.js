@@ -334,7 +334,7 @@ describe('MongoAdapter', function () {
         });
     });
 
-    it.skip('expect to work many times', function (done) {
+    it('expect to work many times', function (done) {
       var total = 10;
       var counter = 0;
 
@@ -371,7 +371,6 @@ describe('MongoAdapter', function () {
           })
           .then(function (collection) {
             expect(collection).to.be.an.instanceOf(Collection);
-            return defaultAdapter.closeConnection();
           })
           .then(function () {
             counter++;

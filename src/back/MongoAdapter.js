@@ -122,8 +122,8 @@ function MongoAdapter(connectionUrl, connectionOptions) {
         MongoClient
           .connect(connectionUrl, connectionOptions)
           .then(function (database) {
-            _databaseIsLocked = false;
             _database = database;
+            _databaseIsLocked = false;
             resolve();
             _processDatabaseRequestQueue();
           })
@@ -172,8 +172,8 @@ function MongoAdapter(connectionUrl, connectionOptions) {
         _database
           .close()
           .then(function () {
-            _databaseIsLocked = false;
             _database = null;
+            _databaseIsLocked = false;
             resolve();
             _processDatabaseRequestQueue();
           })
