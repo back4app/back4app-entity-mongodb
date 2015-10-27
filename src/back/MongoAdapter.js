@@ -195,11 +195,34 @@ function MongoAdapter(connectionUrl, connectionOptions) {
 
 classes.generalize(Adapter, MongoAdapter);
 
-MongoAdapter.prototype.loadAttribute = loadAttribute;
+MongoAdapter.prototype.loadEntity = loadEntity;
+MongoAdapter.prototype.loadEntityAttribute = loadEntityAttribute;
 MongoAdapter.prototype.insertObject = insertObject;
 //MongoAdapter.prototype.instanceToJSON = instanceToJSON;
 
-function loadAttribute(Entity, attribute) {
+function loadEntity(Entity) {
+  expect(Entity.dataName).to.not.equal(
+    '',
+    'The dataName of an Entity cannot be an empty string in a MongoAdapter'
+  );
+
+  expect(Entity.dataName).to.not.match(
+    /^system\./,
+    'The dataName of an Entity cannot start with "system." in a MongoAdapter'
+  );
+
+  expect(Entity.dataName).to.not.contain(
+    '$',
+    'The dataName of an Entity cannot contain "$" in a MongoAdapter'
+  );
+
+  expect(Entity.dataName).to.not.contain(
+    '\0',
+    'The dataName of an Entity cannot contain "\0" in a MongoAdapter'
+  );
+}
+
+function loadEntityAttribute(Entity, attribute) {
   var dataName = attribute.getDataName(Entity.adapterName);
 
   expect(dataName).to.not.match(
@@ -211,13 +234,21 @@ function loadAttribute(Entity, attribute) {
     '.',
     'The dataName of an Attribute cannot contain "." in a MongoAdapter'
   );
+
+  expect(dataName).to.not.contain(
+    '\0',
+    'The dataName of an Attribute cannot contain "\0" in a MongoAdapter'
+  );
 }
 
-function insertObject() {
+function insertObject(entityObject) {
   return this
     .getDatabase()
     .then(function (database) {
-      return database;
+      return database.collection(entityObject.Entity.specification.name);
+    })
+    .then(function () {
+      //collection.
     });
 }
 
