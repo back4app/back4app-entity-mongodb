@@ -198,6 +198,7 @@ classes.generalize(Adapter, MongoAdapter);
 MongoAdapter.prototype.loadAttribute = loadAttribute;
 MongoAdapter.prototype.insertObject = insertObject;
 //MongoAdapter.prototype.instanceToJSON = instanceToJSON;
+MongoAdapter.prototype.getObject = getObject;
 
 function loadAttribute(Entity, attribute) {
   var dataName = attribute.getDataName(Entity.adapterName);
@@ -233,3 +234,18 @@ function insertObject() {
 //
 //  return json;
 //}
+
+function getObject(entityClass, query) {
+  return this
+    .getDatabase()
+    .then(function (db) {
+      var name = entityClass.specification.name;
+      // TODO: deep copy query
+      if (query.hasOwnProperty('id')) {
+        query._id = query.id;
+        delete query.id;
+      }
+      return db.collection(name).find(query).next();
+      // TODO: populate entity
+    });
+}
