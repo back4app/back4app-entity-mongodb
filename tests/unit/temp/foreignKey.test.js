@@ -7,8 +7,7 @@
 var chai = require('chai');
 var expect = chai.expect;
 var mongodb = require('mongodb');
-var MJ = require('mongo-fast-join'),
-  mongoJoin = new MJ();
+var Promise = require('bluebird');
 
 /*var AssertionError = chai.AssertionError;
  var Promisse = require('bluebird');
@@ -40,21 +39,54 @@ describe.only('foreign key strategy', function () {
     db.close();
   });
 
+  function join(result, field, collection/*, options*/) {
+    return new Promise(function (resolve) {
+      var ids = [];
+      var i;
+      for (i in result) {
+        var doc = result[i];
+        for (var key in doc[field]) {
+          var fieldObj = doc[field][key];
+          //console.log(fieldObj);
+          ids.push(fieldObj._id || fieldObj.id || fieldObj.oid);
+        }
+      }
+      var refCollection = db.collection(collection);
+      refCollection.find({_id: {$in: ids}}).toArray(function (err, docs) {
+        var dict = {};
+        for (i in docs) {
+          dict[docs[i]._id] = docs[i];
+        }
+
+        for (i in result) {
+          var doc = result[i];
+          for (var key in doc[field]) {
+            var fieldObj = doc[field][key];
+            var id = fieldObj._id || fieldObj.id || fieldObj.oid;
+            doc[field][key] = dict[id];
+          }
+        }
+
+        resolve(result);
+      });
+    });
+  }
+
   it('should save the foreign key as a DBRef',
     function (done) {
       db.collection('authors')
-        .insertMany( [{
+        .insertMany([{
           '_id': 'test',
-          'name': 'Ukrasad'
+          'name': 'Autor Um'
         }, {
           '_id': 'test2',
-          'name': 'Dasarku'
-        }], function(err, result) {
-          expect(err).to.be.null;
+          'name': 'Autor Dois'
+        }], function (err) {
+          expect(err).to.be.a('null');
           db.collection('books')
-            .insertOne( {
+            .insertMany([{
               '_id': 'book',
-              'title': 'Barubaru lululu',
+              'title': 'Livro de Dois Autores',
               'author': [{
                 '$ref': 'authors',
                 '$id': 'test'
@@ -62,16 +94,23 @@ describe.only('foreign key strategy', function () {
                 '$ref': 'authors',
                 '$id': 'test2'
               }]
-            }, function(err, result) {
-              expect(err).to.be.null;
+            },{
+              '_id': 'book2',
+              'title': 'Livro de Um Autor',
+              'author': [{
+                '$ref': 'authors',
+                '$id': 'test'
+              }]
+            }], function (err) {
+              expect(err).to.be.a('null');
 
-              db.collection('books').find( )
-                .toArray(function(err, doc) {
-                  expect(err).to.be.null;
+              db.collection('books').find()
+                .toArray(function (err, doc) {
+                  expect(err).to.be.a('null');
                   expect(doc[0]).to.have.property('_id');
                   expect(doc[0]).to.have.property('author');
                   expect(doc[0].author[0]).to.have.property('oid');
-                  console.log(doc[0]);
+                  //console.log(doc[0]);
                   done();
                 });
             });
@@ -79,29 +118,20 @@ describe.only('foreign key strategy', function () {
         });
     });
 
-  it('should join the ', function(done) {
-    mongoJoin.query(db.collection('books'),
-      {}, //query statement
-      {}, //fields
-      {} //options
-    ).join({
-        joinCollection: db.collection('authors'),
-        leftKeys: ['author.oid'],
-        rightKeys: ['_id'],
-        newKey: 'author'
-      }).exec(function(er, doc) {
-        /*delete doc[0]['author'];
-         doc[0]['authors'] = doc[0]['author_joined'];
-         delete doc[0]['author_joined'];*///used to clean the refs
-        doc[0].author = doc[0].author
-          .splice(doc[0].author.length/2);//new way to clean refs
-        expect(er).to.be.undefined;
-        expect(doc).to.not.be.undefined;
-        expect(doc[0].author[0]).to.not.have.property('oid');
-        expect(doc[0].author[0].name).to.equal('Ukrasad');
-        db.close();
-        done();
+  it('should join the collections', function (done) {
+    db.collection('books').find()
+      .toArray(function (err, doc) {
+        join(doc, 'author', 'authors').then(function (result) {
+          expect(result).to.not.be.an('undefined');
+          expect(result[0].author[0]).to.not.have.property('oid');
+          expect(result[0].author[0].name).to.equal('Autor Um');
+          expect(result[0].author[1].name).to.equal('Autor Dois');
+          //console.log(result[0],result[1]);
+          db.close();
+          done();
+        });
       });
+
   });
 
 });
