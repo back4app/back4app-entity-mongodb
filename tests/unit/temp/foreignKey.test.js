@@ -1,7 +1,3 @@
-//
-// Created by davimacedo on 22/10/15.
-//
-
 'use strict';
 
 var chai = require('chai');
@@ -9,19 +5,7 @@ var expect = chai.expect;
 var mongodb = require('mongodb');
 var Promise = require('bluebird');
 
-/*var AssertionError = chai.AssertionError;
- var Promisse = require('bluebird');
- var entity = require('@back4app/back4app-entity');
- var settings = entity.settings;
- var classes = entity.utils.classes;
- var Adapter = entity.adapters.Adapter;
- var MongoAdapter = require('../../../').MongoAdapter;*/
-
-require('../settings');
-
-//var defaultAdapter = settings.ADAPTERS.default;
-
-describe.only('foreign key strategy', function () {
+describe('foreign key strategy', function () {
   var db;
 
   before(function (done) {
