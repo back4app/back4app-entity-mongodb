@@ -5,7 +5,10 @@ var Promise = require('bluebird');
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var classes = require('@back4app/back4app-entity').utils.classes;
+var objects = require('@back4app/back4app-entity').utils.objects;
 var Adapter = require('@back4app/back4app-entity').adapters.Adapter;
+
+var QueryError = require('./errors').QueryError;
 
 module.exports = MongoAdapter;
 
@@ -235,17 +238,56 @@ function insertObject() {
 //  return json;
 //}
 
-function getObject(entityClass, query) {
-  return this
-    .getDatabase()
-    .then(function (db) {
-      var name = entityClass.specification.name;
-      // TODO: deep copy query
-      if (query.hasOwnProperty('id')) {
-        query._id = query.id;
-        delete query.id;
-      }
-      return db.collection(name).find(query).next();
-      // TODO: populate entity
-    });
+function getObject(EntityClass, query) {
+  var cursor;
+  var document;
+
+  function findDocument(db) {
+    // copy query to not mess with user's object
+    query = objects.copy(query);
+    // rename id field
+    var name = EntityClass.specification.name;
+    if (query.hasOwnProperty('id')) {
+      query._id = query.id;
+      delete query.id;
+    }
+    // perform query
+    cursor = db.collection(name).find(query);
+    return cursor.next();
+  }
+
+  function checkNotEmpty(doc) {
+    // check for no result
+    if (doc === null) {
+      throw new QueryError('Object does not exist');
+    }
+    // save document
+    document = doc;
+  }
+
+  function checkNotMultiple() {
+    // check for multiple results
+    return cursor.hasNext()
+      .then(function (hasNext) {
+        if (hasNext) {
+          throw new QueryError('Query matches multiple objects');
+        }
+      });
+  }
+
+  function populateEntity() {
+    // return populated entity
+    var attrs = objects.copy(document);
+    if (attrs.hasOwnProperty('_id')) {
+      attrs.id = attrs._id;
+      delete attrs._id;
+    }
+    return new EntityClass(attrs);
+  }
+
+  return this.getDatabase()
+    .then(findDocument)
+    .then(checkNotEmpty)
+    .then(checkNotMultiple)
+    .then(populateEntity);
 }

@@ -1,4 +1,5 @@
 var MongoAdapter = require('./MongoAdapter');
+var errors = require('./errors');
 
 /**
  * Contains implementation of MongoDB adapter for back{4}app's entities.
@@ -7,3 +8,4 @@ var MongoAdapter = require('./MongoAdapter');
 module.exports = {};
 
 module.exports.MongoAdapter = MongoAdapter;
+module.exports.errors = errors;
