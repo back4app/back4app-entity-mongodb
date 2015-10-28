@@ -270,6 +270,16 @@ function loadEntityAttribute(Entity, attribute) {
     '\0',
     'The dataName of an Attribute cannot contain "\0" in a MongoAdapter'
   );
+
+  expect(dataName).to.not.equal(
+    'Entity',
+    'The dataName of an Attribute cannot be equal to "Entity" in a MongoAdapter'
+  );
+
+  expect(dataName).to.not.equal(
+    '_id',
+    'The dataName of an Attribute cannot be equal to "_id" in a MongoAdapter'
+  );
 }
 
 function insertObject(entityObject) {
