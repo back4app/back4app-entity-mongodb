@@ -246,12 +246,12 @@ function getObject(EntityClass, query) {
     // copy query to not mess with user's object
     query = objects.copy(query);
     // rename id field
-    var name = EntityClass.specification.name;
     if (query.hasOwnProperty('id')) {
       query._id = query.id;
       delete query.id;
     }
     // perform query
+    var name = EntityClass.specification.name;
     cursor = db.collection(name).find(query);
     return cursor.next();
   }
@@ -277,11 +277,7 @@ function getObject(EntityClass, query) {
 
   function populateEntity() {
     // return populated entity
-    var attrs = objects.copy(document);
-    if (attrs.hasOwnProperty('_id')) {
-      attrs.id = attrs._id;
-      delete attrs._id;
-    }
+    var attrs = documentToObject(document);
     return new EntityClass(attrs);
   }
 
@@ -290,4 +286,19 @@ function getObject(EntityClass, query) {
     .then(checkNotEmpty)
     .then(checkNotMultiple)
     .then(populateEntity);
+}
+
+function documentToObject(doc) {
+  var obj = objects.copy(doc);
+
+  // replace `_id` with `id`
+  if (obj.hasOwnProperty('_id')) {
+    obj.id = obj._id;
+    delete obj._id;
+  }
+
+  // remove `Entity`
+  delete obj.Entity;
+
+  return obj;
 }

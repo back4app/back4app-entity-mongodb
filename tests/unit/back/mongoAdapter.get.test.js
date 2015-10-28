@@ -38,69 +38,154 @@ describe('MongoAdapter', function () {
     ]);
   });
 
-  describe('#getObject()', function () {
+  // TODO: remove `.only`
+  describe.only('#getObject()', function () {
     // back4app Entities
-    var User = Entity.specify({
-      name: 'User',
+    var Person = Entity.specify({
+      name: 'Person',
       attributes: {
         name: {type: 'String'},
         age: {type: 'Number'},
-        admin: {type: 'Boolean'}
+        married: {type: 'Boolean'}
       }
     });
 
-    // back4app entity instances
-    var john = new User({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, admin: true});
-    var theo = new User({id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, admin: false});
-    var will = new User({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, admin: false});
-
-    // MongoDB documents
-    var johnDoc = {_id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, admin: true};
-    var theoDoc = {_id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, admin: false};
-    var willDoc = {_id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, admin: false};
-
-    beforeEach(function () {
-      // populate test database
-      return db.collection('User').insertMany([johnDoc, theoDoc, willDoc]);
+    var Author = Person.specify({
+      name: 'Author',
+      attributes: {
+        readers: {type: 'Number'},
+        books: {type: 'Book', multiplicity: '*'}
+      }
     });
 
-    afterEach(function () {
-      // clear test database
-      return db.dropDatabase();
+    var Book = Entity.specify({
+      name: 'Book',
+      attributes: {
+        title: {type: 'String'},
+        publishedAt: {type: 'Date'}
+      }
     });
 
+    // global tests
     it('should return a promise', function () {
-      var result = mongoAdapter.getObject(User, {});
+      var result = mongoAdapter.getObject(Person, {});
       expect(result).to.be.instanceOf(Promise);
-      result.catch(function(){}); // ignore query errors, only testing type
+      result.catch(function () {}); // ignore query errors, only testing type
     });
 
-    it('should get object by id', function () {
-      return expect(mongoAdapter.getObject(User, {id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'}))
-        .to.become(john)
-        .and.instanceOf(User);
+    describe('simple objects', function () {
+      // back4app entity instances
+      var john = new Person({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true});
+      var theo = new Person({id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, married: false});
+      var will = new Person({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, married: false});
+
+      beforeEach(function () {
+        // populate test database
+        return db.collection('Person').insertMany([
+          {Entity: 'Person', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true},
+          {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, married: false},
+          {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, married: false}
+        ]);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should get object by id', function () {
+        return expect(mongoAdapter.getObject(Person, {id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'}))
+          .to.become(john)
+          .and.instanceOf(Person);
+      });
+
+      it('should get object by custom property', function () {
+        return expect(mongoAdapter.getObject(Person, {name: 'Theo'}))
+          .to.become(theo)
+          .and.instanceOf(Person);
+      });
+
+      it('should get object by multiple properties', function () {
+        return expect(mongoAdapter.getObject(Person, {age: 30, married: false}))
+          .to.become(will)
+          .and.instanceOf(Person);
+      });
+
+      it('should reject query with no result', function () {
+        return expect(mongoAdapter.getObject(Person, {name: 'Nobody'}))
+          .to.eventually.be.rejectedWith(QueryError);
+      });
+
+      it('should reject query with multiple results', function () {
+        return expect(mongoAdapter.getObject(Person, {}))
+          .to.eventually.be.rejectedWith(QueryError);
+      });
     });
 
-    it('should get object by custom property', function () {
-      return expect(mongoAdapter.getObject(User, {name: 'Theo'}))
-        .to.become(theo)
-        .and.instanceOf(User);
+    describe('objects with generalization', function () {
+      // back4app entity instances
+      var john = new Author({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true, readers: 1000});
+      var theo = new Author({id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, married: false, readers: 450});
+      var will = new Author({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, married: false, readers: 1000});
+
+      beforeEach(function () {
+        // populate test database
+        return Promise.all([
+          db.collection('Person').insertMany([
+            {Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true},
+            {Entity: 'Author', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, married: false},
+            {Entity: 'Author', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, married: false}
+          ]),
+          db.collection('Author').insertMany([
+            {Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true, readers: 1000},
+            {Entity: 'Author', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, married: false, readers: 450},
+            {Entity: 'Author', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, married: false, readers: 1000}
+          ])
+        ]);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should get object by id', function () {
+        return expect(mongoAdapter.getObject(Author, {id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'}))
+          .to.become(john)
+          .and.instanceOf(Author);
+      });
+
+      it('should get object by custom property', function () {
+        return expect(mongoAdapter.getObject(Author, {readers: 450}))
+          .to.become(theo)
+          .and.instanceOf(Author);
+      });
+
+      it('should get object by parent property', function () {
+        return expect(mongoAdapter.getObject(Author, {name: 'Theo'}))
+          .to.become(theo)
+          .and.instanceOf(Author);
+      });
+
+      it('should get object by multiple properties', function () {
+        return expect(mongoAdapter.getObject(Author, {married: false, readers: 1000}))
+          .to.become(will)
+          .and.instanceOf(Author);
+      });
+
+      it('should reject query with no result', function () {
+        return expect(mongoAdapter.getObject(Person, {name: 'Nobody'}))
+          .to.eventually.be.rejectedWith(QueryError);
+      });
+
+      it('should reject query with multiple results', function () {
+        return expect(mongoAdapter.getObject(Person, {}))
+          .to.eventually.be.rejectedWith(QueryError);
+      });
     });
 
-    it('should get object by multiple properties', function () {
-      return expect(mongoAdapter.getObject(User, {age: 30, admin: false}))
-        .to.become(will)
-        .and.instanceOf(User);
-    });
+    describe('objects with association', function () {
 
-    it('should reject query with no result', function () {
-      return expect(mongoAdapter.getObject(User, {name: 'Nobody'}))
-        .to.eventually.be.rejectedWith(QueryError);
-    });
-
-    it('should reject query with multiple results', function () {
-      return expect(mongoAdapter.getObject(User, {}))
-        .to.eventually.be.rejectedWith(QueryError);
     });
   });
 });
