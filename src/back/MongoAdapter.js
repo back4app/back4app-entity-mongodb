@@ -347,9 +347,11 @@ function objectToDocument(entityObject, EntityClass) {
   for (var attributeName in entitySpecificationAttributes) {
     var attribute = entitySpecificationAttributes[attributeName];
     var attributeDataName = attribute.getDataName(entityObject.adapterName);
-    var attributeValue = entityObject[attributeName];
+    var attributeValue = attribute.getDataValue(entityObject[attributeName]);
     document[attributeDataName] = attributeValue;
   }
+
+  document.Entity = entityObject.Entity.specification.name;
 
   document._id = entityObject.id;
   if (document.hasOwnProperty('id')) {

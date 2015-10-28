@@ -69,7 +69,9 @@ describe('MongoAdapter#insertObject', function () {
     var EntitySpecialization = Entity.specify({
       name: 'EntitySpecialization',
       attributes: {
-        attribute1Name: {}
+        attribute1Name: {
+          type: 'String'
+        }
       }
     });
 
@@ -232,24 +234,36 @@ describe('MongoAdapter#insertObject', function () {
     var A = Entity.specify({
       name: 'A',
       attributes: {
-        a1: {},
-        a2: {}
+        a1: {
+          type: 'String'
+        },
+        a2: {
+          type: 'String'
+        }
       }
     });
 
     var B = A.specify({
       name: 'B',
       attributes: {
-        b1: {},
-        b2: {}
+        b1: {
+          type: 'String'
+        },
+        b2: {
+          type: 'String'
+        }
       }
     });
 
     var C = B.specify({
       name: 'C',
       attributes: {
-        c1: {},
-        c2: {}
+        c1: {
+          type: 'String'
+        },
+        c2: {
+          type: 'String'
+        }
       }
     });
 
