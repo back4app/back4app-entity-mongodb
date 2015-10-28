@@ -198,6 +198,7 @@ classes.generalize(Adapter, MongoAdapter);
 MongoAdapter.prototype.loadAttribute = loadAttribute;
 MongoAdapter.prototype.insertObject = insertObject;
 //MongoAdapter.prototype.instanceToJSON = instanceToJSON;
+MongoAdapter.prototype.deleteObject = deleteObject;
 
 function loadAttribute(Entity, attribute) {
   var dataName = attribute.getDataName(Entity.adapterName);
@@ -233,3 +234,42 @@ function insertObject() {
 //
 //  return json;
 //}
+
+function deleteObject(entity) {
+
+  var mongoAdapter = this;
+
+  return this
+    .getDatabase()
+    .then(function (database) {
+
+      var EntityClass = entity.Entity;
+
+      var promises = [];
+
+      while (EntityClass) {
+        console.log(EntityClass.specification.name, entity.id);
+        promises.push(_deleteObject(EntityClass, entity.id));
+        EntityClass = EntityClass.General;
+      }
+
+      var EntityClassArray = Object.keys(EntityClass.specializations);
+      for(var i=0; i<EntityClassArray.length; i++){
+        console.log(EntityClassArray[i]);
+        promises.push(getSpecializations(EntityClassArray[i]));
+      }
+
+      //Promise.all(promises)
+      //  .then(resolve)
+      //  .catch(reject);
+
+      function _deleteObject(EntityClass, id) {
+        return mongoAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database.collection(EntityClass.specification.name).findOneAndDelete({_id: id});
+          })
+      }
+
+    });
+}
