@@ -4,8 +4,11 @@ var expect = require('chai').expect;
 var Promise = require('bluebird');
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
-var classes = require('@back4app/back4app-entity').utils.classes;
-var Adapter = require('@back4app/back4app-entity').adapters.Adapter;
+var entity = require('@back4app/back4app-entity');
+var classes = entity.utils.classes;
+var Entity = entity.models.Entity;
+var Attribute = entity.models.attributes.Attribute;
+var Adapter = entity.adapters.Adapter;
 
 module.exports = MongoAdapter;
 
@@ -78,9 +81,7 @@ function MongoAdapter(connectionUrl, connectionOptions) {
           .then(function () {
             resolve(_database);
           })
-          .catch(function (error) {
-            reject(error);
-          });
+          .catch(reject);
       } else {
         resolve(_database);
       }
@@ -201,6 +202,18 @@ MongoAdapter.prototype.insertObject = insertObject;
 //MongoAdapter.prototype.instanceToJSON = instanceToJSON;
 
 function loadEntity(Entity) {
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when loading an entity in a ' +
+    'MongoAdapter (it has to be passed 1 argument)'
+  );
+
+  expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
+    true,
+    'Invalid argument "Entity" when loading an entity in a ' +
+    'MongoAdapter (it has to be an Entity class)'
+  );
+
   expect(Entity.dataName).to.not.equal(
     '',
     'The dataName of an Entity cannot be an empty string in a MongoAdapter'
@@ -223,6 +236,24 @@ function loadEntity(Entity) {
 }
 
 function loadEntityAttribute(Entity, attribute) {
+  expect(arguments).to.have.length(
+    2,
+    'Invalid arguments length when loading an entity attribute in a ' +
+    'MongoAdapter (it has to be passed 2 arguments)'
+  );
+
+  expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
+    true,
+    'Invalid argument "Entity" when loading an entity attribute in a ' +
+    'MongoAdapter (it has to be an Entity class)'
+  );
+
+  expect(attribute).to.be.an.instanceOf(
+    Attribute,
+    'Invalid argument "attribute" when loading an entity attribute in a ' +
+    'MongoAdapter (it has to be an Attribute instance)'
+  );
+
   var dataName = attribute.getDataName(Entity.adapterName);
 
   expect(dataName).to.not.match(
@@ -242,13 +273,50 @@ function loadEntityAttribute(Entity, attribute) {
 }
 
 function insertObject(entityObject) {
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when inserting an object in a MongoAdapter ' +
+    '(it has to be passed 1 argument)'
+  );
+
+  expect(entityObject).to.be.an.instanceOf(
+    Entity,
+    'Invalid argument "entityObject" when inserting an object in a ' +
+    'MongoAdapter (it has to be an Entity instance)'
+  );
+
+  var document = {};
+
+  var entitySpecification = entityObject.Entity.specification;
+
+  for (var attributeName in entitySpecification.attributes) {
+    var attribute = entitySpecification.attributes[attributeName];
+    var attributeDataName = attribute.getDataName(entityObject.adapterName);
+    var attributeValue = entityObject[attributeName];
+    document[attributeDataName] = attributeValue;
+  }
+
+  document._id = document.id;
+  delete document.id;
+
   return this
     .getDatabase()
     .then(function (database) {
-      return database.collection(entityObject.Entity.specification.name);
+      return database.collection(entityObject.Entity.dataName);
     })
-    .then(function () {
-      //collection.
+    .then(function (collection) {
+      return collection.insertOne(document);
+    })
+    .then(function (result) {
+      return new Promise(function (resolve) {
+        expect(result.insertedCount).to.equal(
+          1,
+          'Invalid result.insertedCount return of collection.insertOne in ' +
+          'MongoDB driver when inserting an Object (it should be 1)'
+        );
+
+        resolve();
+      });
     });
 }
 
