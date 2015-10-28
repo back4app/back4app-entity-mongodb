@@ -227,9 +227,201 @@ describe('MongoAdapter#insertObject', function () {
     }
   );
 
+  it('expect to insert inheritances correctly', function (done) {
+    var A = Entity.specify({
+      name: 'A',
+      attributes: {
+        a1: {},
+        a2: {}
+      }
+    });
+
+    var B = A.specify({
+      name: 'B',
+      attributes: {
+        b1: {},
+        b2: {}
+      }
+    });
+
+    var C = B.specify({
+      name: 'C',
+      attributes: {
+        c1: {},
+        c2: {}
+      }
+    });
+
+    var a = new A({
+      a1: 'aa1',
+      a2: 'aa2'
+    });
+
+    var b = new B({
+      a1: 'ba1',
+      a2: 'ba2',
+      b1: 'bb1',
+      b2: 'bb2'
+    });
+
+    var c = new C({
+      a1: 'ca1',
+      a2: 'ca2',
+      b1: 'cb1',
+      b2: 'cb2',
+      c1: 'cc1',
+      c2: 'cc2'
+    });
+
+    var counter = 0;
+
+    insertObjects();
+
+    function insertObjects() {
+      defaultAdapter
+        .insertObject(a)
+        .then(checkResults);
+
+      defaultAdapter
+        .insertObject(b)
+        .then(checkResults);
+
+      defaultAdapter
+        .insertObject(c)
+        .then(checkResults);
+    }
+
+    function checkResults() {
+      counter++;
+
+      if (counter === 3) {
+        counter = 0;
+
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database
+              .collection('Entity')
+              .find({})
+              .toArray();
+          })
+          .then(function (documents) {
+            expect(documents).to.deep.equal([
+              defaultAdapter.objectToDocument(a, Entity),
+              defaultAdapter.objectToDocument(b, Entity),
+              defaultAdapter.objectToDocument(c, Entity)
+            ]);
+
+            finalize();
+          });
+
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database
+              .collection('A')
+              .find()
+              .toArray();
+          })
+          .then(function (documents) {
+            expect(documents).to.deep.equal([
+              defaultAdapter.objectToDocument(a),
+              defaultAdapter.objectToDocument(b, A),
+              defaultAdapter.objectToDocument(c, A)
+            ]);
+
+            finalize();
+          });
+
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database
+              .collection('B')
+              .find()
+              .toArray();
+          })
+          .then(function (documents) {
+            expect(documents).to.deep.equal([
+              defaultAdapter.objectToDocument(b),
+              defaultAdapter.objectToDocument(c, B)
+            ]);
+
+            finalize();
+          });
+
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database
+              .collection('C')
+              .find()
+              .toArray();
+          })
+          .then(function (documents) {
+            expect(documents).to.deep.equal([
+              defaultAdapter.objectToDocument(c)
+            ]);
+
+            finalize();
+          });
+      }
+    }
+
+    function finalize() {
+      counter++;
+
+      if (counter === 4) {
+        counter = 0;
+
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database.collection('Entity').deleteMany({});
+          })
+          .then(callDone);
+
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database.collection('A').deleteMany({});
+          })
+          .then(callDone);
+
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database.collection('B').deleteMany({});
+          })
+          .then(callDone);
+
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database.collection('C').deleteMany({});
+          })
+          .then(callDone);
+      }
+    }
+
+    function callDone() {
+      counter++;
+
+      if (counter === 4) {
+        done();
+      }
+    }
+  });
+
   after(function (done) {
     defaultAdapter
-      .closeConnection()
+      .getDatabase()
+      .then(function (database) {
+        return database.dropDatabase();
+      })
+      .then(function () {
+        return defaultAdapter.closeConnection();
+      })
       .then(done);
   });
 });
