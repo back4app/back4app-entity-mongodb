@@ -273,46 +273,74 @@ function loadEntityAttribute(Entity, attribute) {
 }
 
 function insertObject(entityObject) {
+  var mongoAdapter = this;
+
   expect(arguments).to.have.length(
     1,
     'Invalid arguments length when inserting an object in a MongoAdapter ' +
     '(it has to be passed 1 argument)'
   );
 
-  expect(entityObject).to.be.an.instanceOf(
-    Entity,
-    'Invalid argument "entityObject" when inserting an object in a ' +
-    'MongoAdapter (it has to be an Entity instance)'
-  );
+  return new Promise(function (resolve, reject) {
+    expect(entityObject).to.be.an.instanceOf(
+      Entity,
+      'Invalid argument "entityObject" when inserting an object in a ' +
+      'MongoAdapter (it has to be an Entity instance)'
+    );
 
-  return this
-    .getDatabase()
-    .then(function (database) {
-      return database.collection(entityObject.Entity.dataName);
-    })
-    .then(function (collection) {
-      return collection.insertOne(objectToDocument(entityObject));
-    })
-    .then(function (result) {
-      return new Promise(function (resolve) {
-        expect(result.insertedCount).to.equal(
-          1,
-          'Invalid result.insertedCount return of collection.insertOne in ' +
-          'MongoDB driver when inserting an Object (it should be 1)'
-        );
+    var EntityClass = entityObject.Entity;
 
-        resolve();
-      });
-    });
+    var counter = 0;
+
+    while (EntityClass) {
+      counter++;
+
+      (function (EntityClass) {
+        mongoAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database.collection(EntityClass.dataName);
+          })
+          .then(function (collection) {
+            return collection.insertOne(
+              objectToDocument(
+                entityObject,
+                EntityClass
+              )
+            );
+          })
+          .then(function (result) {
+            expect(result.insertedCount).to.equal(
+              1,
+              'Invalid result.insertedCount return of collection.insertOne in ' +
+              'MongoDB driver when inserting an Object (it should be 1)'
+            );
+
+            counter--;
+
+            if (counter === 0) {
+              resolve();
+            }
+          })
+          .catch(reject);
+      })(EntityClass);
+
+      EntityClass = EntityClass.General;
+    }
+  });
 }
 
-function objectToDocument(entityObject) {
+function objectToDocument(entityObject, EntityClass) {
   var document = {};
 
-  var entitySpecification = entityObject.Entity.specification;
+  if (!EntityClass) {
+    EntityClass = entityObject.Entity;
+  }
 
-  for (var attributeName in entitySpecification.attributes) {
-    var attribute = entitySpecification.attributes[attributeName];
+  var entitySpecificationAttributes = EntityClass.specification.attributes;
+
+  for (var attributeName in entitySpecificationAttributes) {
+    var attribute = entitySpecificationAttributes[attributeName];
     var attributeDataName = attribute.getDataName(entityObject.adapterName);
     var attributeValue = entityObject[attributeName];
     document[attributeDataName] = attributeValue;

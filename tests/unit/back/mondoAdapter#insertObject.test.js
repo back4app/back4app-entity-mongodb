@@ -20,9 +20,11 @@ describe('MongoAdapter#insertObject', function () {
       defaultAdapter.insertObject();
     }).to.throw(AssertionError);
 
-    expect(function () {
-      defaultAdapter.insertObject({});
-    }).to.throw(AssertionError);
+    defaultAdapter
+      .insertObject({})
+      .catch(function (error) {
+        expect(error).to.be.an.instanceOf(AssertionError);
+      });
 
     expect(function () {
       defaultAdapter.insertObject(new Entity(), null);
@@ -81,6 +83,32 @@ describe('MongoAdapter#insertObject', function () {
       })
       .then(function (database) {
         return database
+          .collection('Entity')
+          .find({_id: entitySpecialization.id}).toArray();
+      })
+      .then(function (documents) {
+        expect(documents).to.be.an.instanceOf(Array);
+        expect(documents).to.have.length(1);
+        expect(documents[0]).to.deep.equal(
+          defaultAdapter.objectToDocument(
+            entitySpecialization,
+            Entity
+          )
+        );
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('Entity')
+          .deleteOne({
+            _id: entitySpecialization.id
+          });
+      })
+      .then(function () {
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
           .collection('EntitySpecialization')
           .find({_id: entitySpecialization.id}).toArray();
       })
@@ -88,7 +116,10 @@ describe('MongoAdapter#insertObject', function () {
         expect(documents).to.be.an.instanceOf(Array);
         expect(documents).to.have.length(1);
         expect(documents[0]).to.deep.equal(
-          defaultAdapter.objectToDocument(entitySpecialization)
+          defaultAdapter.objectToDocument(
+            entitySpecialization,
+            EntitySpecialization
+          )
         );
         return defaultAdapter.getDatabase();
       })
@@ -143,6 +174,32 @@ describe('MongoAdapter#insertObject', function () {
         })
         .then(function (database) {
           return database
+            .collection('Entity')
+            .find({_id: myEntity.id}).toArray();
+        })
+        .then(function (documents) {
+          expect(documents).to.be.an.instanceOf(Array);
+          expect(documents).to.have.length(1);
+          expect(documents[0]).to.deep.equal(
+            defaultAdapter.objectToDocument(
+              myEntity,
+              Entity
+            )
+          );
+          return defaultAdapter.getDatabase();
+        })
+        .then(function (database) {
+          return database
+            .collection('Entity')
+            .deleteOne({
+              _id: myEntity.id
+            });
+        })
+        .then(function () {
+          return defaultAdapter.getDatabase();
+        })
+        .then(function (database) {
+          return database
             .collection('MyEntity')
             .find({_id: myEntity.id}).toArray();
         })
@@ -150,20 +207,29 @@ describe('MongoAdapter#insertObject', function () {
           expect(documents).to.be.an.instanceOf(Array);
           expect(documents).to.have.length(1);
           expect(documents[0]).to.deep.equal(
-            defaultAdapter.objectToDocument(myEntity)
+            defaultAdapter.objectToDocument(
+              myEntity,
+              MyEntity
+            )
           );
           return defaultAdapter.getDatabase();
         })
-        //.then(function (database) {
-        //  return database
-        //    .collection('MyEntity')
-        //    .deleteOne({
-        //      _id: myEntity.id
-        //    });
-        //})
+        .then(function (database) {
+          return database
+            .collection('MyEntity')
+            .deleteOne({
+              _id: myEntity.id
+            });
+        })
         .then(function () {
           done();
         });
     }
   );
+
+  after(function (done) {
+    defaultAdapter
+      .closeConnection()
+      .then(done);
+  });
 });
