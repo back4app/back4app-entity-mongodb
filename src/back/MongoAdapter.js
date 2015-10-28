@@ -199,7 +199,7 @@ classes.generalize(Adapter, MongoAdapter);
 MongoAdapter.prototype.loadEntity = loadEntity;
 MongoAdapter.prototype.loadEntityAttribute = loadEntityAttribute;
 MongoAdapter.prototype.insertObject = insertObject;
-//MongoAdapter.prototype.instanceToJSON = instanceToJSON;
+MongoAdapter.prototype.objectToDocument = objectToDocument;
 
 function loadEntity(Entity) {
   expect(arguments).to.have.length(
@@ -285,27 +285,13 @@ function insertObject(entityObject) {
     'MongoAdapter (it has to be an Entity instance)'
   );
 
-  var document = {};
-
-  var entitySpecification = entityObject.Entity.specification;
-
-  for (var attributeName in entitySpecification.attributes) {
-    var attribute = entitySpecification.attributes[attributeName];
-    var attributeDataName = attribute.getDataName(entityObject.adapterName);
-    var attributeValue = entityObject[attributeName];
-    document[attributeDataName] = attributeValue;
-  }
-
-  document._id = document.id;
-  delete document.id;
-
   return this
     .getDatabase()
     .then(function (database) {
       return database.collection(entityObject.Entity.dataName);
     })
     .then(function (collection) {
-      return collection.insertOne(document);
+      return collection.insertOne(objectToDocument(entityObject));
     })
     .then(function (result) {
       return new Promise(function (resolve) {
@@ -320,15 +306,22 @@ function insertObject(entityObject) {
     });
 }
 
-//function instanceToJSON(instance) {
-//  var json = {};
-//  for (var key in instance.Entity.attributes) {
-//    json[key] = instance[key];
-//  }
-//
-//  if (instance.id) {
-//    json._id = instance.id;
-//  }
-//
-//  return json;
-//}
+function objectToDocument(entityObject) {
+  var document = {};
+
+  var entitySpecification = entityObject.Entity.specification;
+
+  for (var attributeName in entitySpecification.attributes) {
+    var attribute = entitySpecification.attributes[attributeName];
+    var attributeDataName = attribute.getDataName(entityObject.adapterName);
+    var attributeValue = entityObject[attributeName];
+    document[attributeDataName] = attributeValue;
+  }
+
+  document._id = entityObject.id;
+  if (document.hasOwnProperty('id')) {
+    delete document.id;
+  }
+
+  return document;
+}
