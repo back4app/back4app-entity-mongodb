@@ -2,10 +2,11 @@
 // Created by davimacedo on 28/10/15.
 //
 
+'use strict';
+
 var chai = require('chai');
 var expect = chai.expect;
 var AssertionError = chai.AssertionError;
-var Promise = require('bluebird');
 var entity = require('@back4app/back4app-entity');
 var Entity = entity.models.Entity;
 var settings = entity.settings;

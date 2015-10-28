@@ -290,42 +290,37 @@ function insertObject(entityObject) {
 
     var EntityClass = entityObject.Entity;
 
-    var counter = 0;
+    var promises = [];
 
     while (EntityClass) {
-      counter++;
+      promises.push(_insertObject(EntityClass));
+      EntityClass = EntityClass.General;
+    }
 
-      (function (EntityClass) {
-        mongoAdapter
-          .getDatabase()
-          .then(function (database) {
-            return database.collection(EntityClass.dataName);
-          })
-          .then(function (collection) {
-            return collection.insertOne(
+    Promise.all(promises)
+      .then(resolve)
+      .catch(reject);
+
+    function _insertObject(EntityClass) {
+      return mongoAdapter
+        .getDatabase()
+        .then(function (database) {
+          return database
+            .collection(EntityClass.dataName)
+            .insertOne(
               objectToDocument(
                 entityObject,
                 EntityClass
               )
             );
-          })
-          .then(function (result) {
-            expect(result.insertedCount).to.equal(
-              1,
-              'Invalid result.insertedCount return of collection.insertOne in ' +
-              'MongoDB driver when inserting an Object (it should be 1)'
-            );
-
-            counter--;
-
-            if (counter === 0) {
-              resolve();
-            }
-          })
-          .catch(reject);
-      })(EntityClass);
-
-      EntityClass = EntityClass.General;
+        })
+        .then(function (result) {
+          expect(result.insertedCount).to.equal(
+            1,
+            'Invalid result.insertedCount return of collection.insertOne ' +
+            'in MongoDB driver when inserting an Object (it should be 1)'
+          );
+        });
     }
   });
 }
