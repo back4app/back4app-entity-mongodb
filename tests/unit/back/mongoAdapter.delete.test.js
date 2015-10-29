@@ -8,7 +8,6 @@ var chai = require('chai');
 var expect = chai.expect;
 var Promise = require('bluebird');
 var mongodb = require('mongodb');
-//var uuid = require('node-uuid');
 var Entity = require('@back4app/back4app-entity').models.Entity;
 var MongoAdapter = require('../../../').MongoAdapter;
 
@@ -31,7 +30,7 @@ describe('Delete method MongoAdapter', function () {
   });
 
   after(function () {
-    return Promise.all([ // equal to done()
+    return Promise.all([
       mongoAdapter.closeConnection(),
       db.close()
     ]);

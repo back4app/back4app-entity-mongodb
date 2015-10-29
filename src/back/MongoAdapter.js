@@ -6,6 +6,8 @@ var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var classes = require('@back4app/back4app-entity').utils.classes;
 var Adapter = require('@back4app/back4app-entity').adapters.Adapter;
+var entity = require('@back4app/back4app-entity');
+var Entity = entity.models.Entity;
 
 module.exports = MongoAdapter;
 
@@ -235,41 +237,56 @@ function insertObject() {
 //  return json;
 //}
 
-function deleteObject(entity) {
+function deleteObject(entityObject) {
 
   var mongoAdapter = this;
 
-  return this
-    .getDatabase()
-    .then(function (database) {
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when deleting an object in MongoAdapter ' +
+    '(it has to be passed 1 argument)'
+  );
 
-      var EntityClass = entity.Entity;
+  return new Promise(function (resolve, reject) {
+    expect(entityObject).to.be.an.instanceOf(
+      Entity,
+      'Invalid argument "entityObject" when deleting an object in a ' +
+      'MongoAdapter (it has to be an Entity instance)'
+    );
 
-      var promises = [];
+    var EntityClass = entityObject.Entity;
 
-      while (EntityClass) {
-        console.log(EntityClass.specification.name, entity.id);
-        promises.push(_deleteObject(EntityClass, entity.id));
-        EntityClass = EntityClass.General;
-      }
+    var promises = [];
 
-      var EntityClassArray = Object.keys(EntityClass.specializations);
-      for(var i=0; i<EntityClassArray.length; i++){
-        console.log(EntityClassArray[i]);
-        promises.push(getSpecializations(EntityClassArray[i]));
-      }
+    while (EntityClass) {
+      promises.push(_deleteObject(EntityClass, entityObject.id));
+      EntityClass = EntityClass.General;
+    }
 
-      //Promise.all(promises)
-      //  .then(resolve)
-      //  .catch(reject);
+    EntityClass = entityObject.Entity;
+    var entitySpecializations = EntityClass.specializations;
+    for (var specialization in entitySpecializations) {
+      promises.push(_deleteObject(entitySpecializations[specialization], entityObject.id));
+    }
 
-      function _deleteObject(EntityClass, id) {
-        return mongoAdapter
-          .getDatabase()
-          .then(function (database) {
-            return database.collection(EntityClass.specification.name).findOneAndDelete({_id: id});
-          })
-      }
+    Promise.all(promises)
+      .then(resolve)
+      .catch(reject);
 
-    });
+    function _deleteObject(EntityClass, id) {
+      return mongoAdapter
+        .getDatabase()
+        .then(function (database) {
+          return database.collection(EntityClass.specification.name).findOneAndDelete({_id: id});
+        })
+        .then(function (result) {
+          expect(result.ok).to.equal(
+            1,
+            'Invalid result.lastErrorObject.n return of collection.findOneAndDelete ' +
+            'in MongoDB driver when deleting an Object (it should be 1)'
+          );
+        });
+    }
+
+  });
 }
