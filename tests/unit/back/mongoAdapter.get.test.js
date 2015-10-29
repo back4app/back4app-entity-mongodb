@@ -38,8 +38,7 @@ describe('MongoAdapter', function () {
     ]);
   });
 
-  // TODO: remove `.only`
-  describe.only('#getObject()', function () {
+  describe('#getObject()', function () {
     // back4app Entities
     var Person = Entity.specify({
       name: 'Person',
