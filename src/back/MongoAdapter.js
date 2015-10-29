@@ -205,6 +205,7 @@ MongoAdapter.prototype.loadAttribute = loadAttribute;
 MongoAdapter.prototype.insertObject = insertObject;
 //MongoAdapter.prototype.instanceToJSON = instanceToJSON;
 MongoAdapter.prototype.getObject = getObject;
+MongoAdapter.prototype.findObjects = findObjects;
 
 function loadAttribute(Entity, attribute) {
   var dataName = attribute.getDataName(Entity.adapterName);
@@ -264,34 +265,18 @@ function getObject(EntityClass, query) {
   var document;
 
   function findDocument(db) {
-    // copy query to not mess with user's object
-    query = objects.copy(query);
-
-    // rename id field
-    if (query.hasOwnProperty('id')) {
-      query._id = query.id;
-      delete query.id;
-    }
-
-    // find collection name
-    var GeneralClass = EntityClass;
-    while (GeneralClass.General !== Entity) {
-      GeneralClass = GeneralClass.General;
-    }
-    var name = GeneralClass.specification.name;
-
-    // perform query
-    cursor = db.collection(name).find(query);
+    cursor = _buildCursor(db, EntityClass, query);
     return cursor.next();
   }
 
   function checkNotEmpty(doc) {
+    // save document
+    document = doc;
+
     // check for no result
     if (doc === null) {
       throw new QueryError('Object does not exist');
     }
-    // save document
-    document = doc;
   }
 
   function checkNotMultiple() {
@@ -314,6 +299,66 @@ function getObject(EntityClass, query) {
     .then(checkNotEmpty)
     .then(checkNotMultiple)
     .then(populateEntity);
+}
+
+/**
+ * Find objects in the database matching given query.
+ * @name module:back4app-entity-mongodb.MongoAdapter#findObjects
+ * @function
+ * @returns {Promise.<object|Error>} Promise that returns found objects if
+ * succeed or Error if failed.
+ * @example
+ * mongoAdapter.findObjects(Car, {year: 1990})
+ *   .then(function(cars) {
+ *     for (var i = 0; i < cars.length; i++) {
+ *       var car = cars[i];
+ *       console.log(car);
+ *     }
+ *   });
+ */
+function findObjects(EntityClass, query) {
+  expect(arguments).to.have.length(
+    2,
+    'Invalid arguments length when inserting an object in a MongoAdapter ' +
+    '(it has to be passed 2 arguments)'
+  );
+
+  function findDocuments(db) {
+    return _buildCursor(db, EntityClass, query).toArray();
+  }
+
+  function populateEntities(docs) {
+    var entities = [];
+    for (var i = 0; i < docs.length; i++) {
+      entities.push(_documentToObject(docs[i]));
+    }
+    return entities;
+  }
+
+  return this.getDatabase()
+    .then(findDocuments)
+    .then(populateEntities);
+}
+
+function _buildCursor(db, EntityClass, query) {
+  // copy query to not mess with user's object
+  query = objects.copy(query);
+
+  // rename id field
+  if (query.hasOwnProperty('id')) {
+    query._id = query.id;
+    delete query.id;
+  }
+
+  // find collection name
+  var GeneralClass = EntityClass;
+  while (GeneralClass.General !== Entity) {
+    GeneralClass = GeneralClass.General;
+  }
+  var name = GeneralClass.specification.name;
+
+  // build cursor
+  return db.collection(name).find(query);
 }
 
 function _documentToObject(document) {
