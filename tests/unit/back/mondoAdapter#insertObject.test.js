@@ -428,6 +428,12 @@ describe('MongoAdapter#insertObject', function () {
     }
   });
 
+  it('expect to insert foreign keys correctly', function (done) {
+    //var Using = Entity.specify('Using');
+    //var Used = Entity.specify('Used');
+    done();
+  });
+
   after(function (done) {
     defaultAdapter
       .getDatabase()

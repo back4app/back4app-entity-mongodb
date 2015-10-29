@@ -349,16 +349,34 @@ function objectToDocument(entityObject, EntityClass) {
   for (var attributeName in entitySpecificationAttributes) {
     var attribute = entitySpecificationAttributes[attributeName];
     var attributeDataName = attribute.getDataName(entityObject.adapterName);
-    var attributeValue = attribute.getDataValue(entityObject[attributeName]);
+    var attributeDataValue = attribute.getDataValue(
+      entityObject[attributeName]
+    );
 
     if (attribute instanceof AssociationAttribute) {
-      document[attributeDataName] = {
-        $ref: attribute.Entity.dataName,
-        $id: attributeValue.id
-      };
-    } else {
-      document[attributeDataName] = attributeValue;
+      if (
+        attribute.multiplicity === '*' ||
+        attribute.multiplicity === '1..*'
+      ) {
+        var newAttributeDataValue = [];
+
+        for (var i = 0; i < attributeDataValue.length; i++) {
+          newAttributeDataValue.push({
+            Entity: attributeDataValue[i].Entity,
+            id: attributeDataValue[i].id
+          });
+
+          attributeDataValue = newAttributeDataValue;
+        }
+      } else {
+        attributeDataValue = {
+          Entity: attributeDataValue.Entity,
+          id: attributeDataValue.id
+        };
+      }
     }
+
+    document[attributeDataName] = attributeDataValue;
   }
 
   document.Entity = entityObject.Entity.specification.name;
