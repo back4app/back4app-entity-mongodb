@@ -16,7 +16,7 @@ describe('Delete method MongoAdapter', function () {
   var db;
   var mongoAdapter;
 
-  before(function() {
+  before(function () {
     var url = 'mongodb://127.0.0.1:27017/test';
 
     // instantiate entity mongo adapter
@@ -36,7 +36,7 @@ describe('Delete method MongoAdapter', function () {
     ]);
   });
 
-  describe.only('#delete()', function () {
+  describe('#delete()', function () {
     //back4app Entities
     var Vehicle = Entity.specify({
       name: 'Vehicle',
@@ -48,7 +48,8 @@ describe('Delete method MongoAdapter', function () {
     var Car = Vehicle.specify({
       name: 'Car',
       attributes: {
-        year: {type: 'String'}
+        year: {type: 'String'},
+        wheels: {type: 'Wheel'}
       }
     });
 
@@ -59,26 +60,88 @@ describe('Delete method MongoAdapter', function () {
       }
     });
 
-    var bmw = new Bmw({id: '00000000-0000-4000-a000-000000000111',
-      regPlate: 'bbb-000', year: '2015', air: true});
-    var audi = new Car({id: '00000000-0000-4000-a000-000000000222',
-      regPlate: 'bbb-000', year: '2015'});
+    var Wheel = Entity.specify({
+      name: 'Wheel',
+      attributes: {
+        tyre: {type: 'Number'}
+      }
+    });
+
+    var bmw = new Bmw({
+      id: '00000000-0000-4000-a000-000000000111',
+      regPlate: 'bbb-000',
+      year: '2015',
+      air: true
+    });
+    var vehicle = new Vehicle({
+      id: '00000000-0000-4000-a000-000000000222',
+      regPlate: 'bbb-000'
+    });
+    var wheel1 = new Wheel({
+      id: '00000000-0000-4000-a000-000000000333',
+      tyre: 17
+    });
+    var wheel2 = new Wheel({
+      id: '00000000-0000-4000-a000-000000000444',
+      tyre: 17
+    });
+    var wheel3 = new Wheel({
+      id: '00000000-0000-4000-a000-000000000555',
+      tyre: 17
+    });
+    var wheel4 = new Wheel({
+      id: '00000000-0000-4000-a000-000000000666',
+      tyre: 17
+    });
+    var car = new Car({
+      id: '00000000-0000-4000-a000-000000000777',
+      regPlate: 'ccc-000', year: '2015',
+      wheels: [wheel1, wheel2, wheel3, wheel4]
+    });
 
     //MongoDb documents
-    var bmwV = {_id: '00000000-0000-4000-a000-000000000111', regPlate: 'bbb-000'};
-    var bmwC = {_id: '00000000-0000-4000-a000-000000000111', year: '2015'};
-    var bmwB = {_id: '00000000-0000-4000-a000-000000000111', air: true};
-
-    var audiV = {_id: '00000000-0000-4000-a000-000000000222', regPlate: 'aaa-000'};
-    var audiC = {_id: '00000000-0000-4000-a000-000000000222', year: '2014'};
-    var audiB = {_id: '00000000-0000-4000-a000-000000000222', air: true};
+    var bmwD = {
+      _id: '00000000-0000-4000-a000-000000000111',
+      Entity: 'Bmw',
+      regPlate: 'bbb-000',
+      year: '2015',
+      air: true
+    };
+    var vehicleD = {
+      _id: '00000000-0000-4000-a000-000000000222',
+      Entity:'Vehicle',
+      regPlate: 'aaa-000'
+    };
+    var wheel1D = {
+      _id: '00000000-0000-4000-a000-000000000333', Entity: 'Wheel', tyre: 17
+    };
+    var wheel2D = {
+      _id: '00000000-0000-4000-a000-000000000444', Entity: 'Wheel', tyre: 17
+    };
+    var wheel3D = {
+      _id: '00000000-0000-4000-a000-000000000555', Entity: 'Wheel', tyre: 17
+    };
+    var wheel4D = {
+      _id: '00000000-0000-4000-a000-000000000666', Entity: 'Wheel', tyre: 17
+    };
+    var carD = {
+      _id: '00000000-0000-4000-a000-000000000777',
+      Entity: 'Car',
+      regPlate: 'ccc-000',
+      year: '2015',
+      wheels: [{
+        id: '00000000-0000-4000-a000-000000000333', Entity: 'Wheel'},
+        {id: '00000000-0000-4000-a000-000000000444', Entity: 'Wheel'},
+        {id: '00000000-0000-4000-a000-000000000555', Entity: 'Wheel'},
+        {id: '00000000-0000-4000-a000-000000000666', Entity: 'Wheel'}
+      ]
+    };
 
     beforeEach(function () {
       //populate test database
       return Promise.all([
-        db.collection('Vehicle').insertMany([bmwV, audiV]),
-        db.collection('Car').insertMany([bmwC, audiC]),
-        db.collection('Bmw').insertMany([bmwB, audiB])
+        db.collection('Wheel').insertMany([wheel1D, wheel2D, wheel3D, wheel4D]),
+        db.collection('Vehicle').insertMany([bmwD, vehicleD, carD])
       ]);
     });
 
@@ -87,53 +150,105 @@ describe('Delete method MongoAdapter', function () {
       return db.dropDatabase();
     });
 
-    it('should delete bmw and all its generalizations', function () {
+    it('expect to delete a single class', function () {
+      return mongoAdapter.deleteObject(vehicle)
+        .then(function () {
+          return db.collection('Vehicle')
+            .find({_id: '00000000-0000-4000-a000-000000000222'}).toArray();
+        })
+        .then(function (docs) {
+          expect(docs.length).to.equal(0);
+        });
+    });
+
+    it('expect to delete a class that has General(s)', function () {
       return mongoAdapter.deleteObject(bmw)
-
         .then(function () {
-          return db.collection('Bmw').find({_id: '00000000-0000-4000-a000-000000000111'}).toArray();
-        })
-        .then(function (docs) {
-          expect(docs.length).to.equal(0);
-        })
-        .then(function () {
-          return db.collection('Car').find({_id: '00000000-0000-4000-a000-000000000111'}).toArray();
-        })
-        .then(function (docs) {
-          expect(docs.length).to.equal(0);
-        })
-        .then(function () {
-          return db.collection('Vehicle').find({_id: '00000000-0000-4000-a000-000000000111'}).toArray();
+          return db.collection('Vehicle')
+            .find({_id: '00000000-0000-4000-a000-000000000111'}).toArray();
         })
         .then(function (docs) {
           expect(docs.length).to.equal(0);
         });
     });
 
-    it('should delete audi and all its specializations and generalizations', function () {
-      return mongoAdapter.deleteObject(audi)
-
+    it('expect to delete a class that has foreign key', function () {
+      return mongoAdapter.deleteObject(car)
         .then(function () {
-          return db.collection('Bmw').find({_id: '00000000-0000-4000-a000-000000000222'}).toArray();
+          return db.collection('Vehicle')
+            .find({_id: '00000000-0000-4000-a000-000000000777'}).toArray();
         })
         .then(function (docs) {
           expect(docs.length).to.equal(0);
         })
         .then(function () {
-          return db.collection('Car').find({_id: '00000000-0000-4000-a000-000000000222'}).toArray();
+          return db.collection('Wheel')
+            .find({_id: '00000000-0000-4000-a000-000000000333'}).toArray();
         })
         .then(function (docs) {
-          expect(docs.length).to.equal(0);
+          expect(docs.length).to.equal(1);
         })
         .then(function () {
-          return db.collection('Vehicle').find({_id: '00000000-0000-4000-a000-000000000222'}).toArray();
+          return db.collection('Wheel')
+            .find({_id: '00000000-0000-4000-a000-000000000444'}).toArray();
         })
         .then(function (docs) {
-          expect(docs.length).to.equal(0);
+          expect(docs.length).to.equal(1);
+        })
+        .then(function () {
+          return db.collection('Wheel')
+            .find({_id: '00000000-0000-4000-a000-000000000555'}).toArray();
+        })
+        .then(function (docs) {
+          expect(docs.length).to.equal(1);
+        })
+        .then(function () {
+          return db.collection('Wheel')
+            .find({_id: '00000000-0000-4000-a000-000000000666'}).toArray();
+        })
+        .then(function (docs) {
+          expect(docs.length).to.equal(1);
         });
     });
 
-
+    it('expect to delete a class that is a foreign key to another class',
+      function () {
+        return mongoAdapter.deleteObject(wheel1)
+          .then(function () {
+            return db.collection('Wheel')
+              .find({_id: '00000000-0000-4000-a000-000000000333'}).toArray();
+          })
+          .then(function (docs) {
+            expect(docs.length).to.equal(0);
+          })
+          .then(function () {
+            return db.collection('Wheel')
+              .find({_id: '00000000-0000-4000-a000-000000000444'}).toArray();
+          })
+          .then(function (docs) {
+            expect(docs.length).to.equal(1);
+          })
+          .then(function () {
+            return db.collection('Wheel')
+              .find({_id: '00000000-0000-4000-a000-000000000555'}).toArray();
+          })
+          .then(function (docs) {
+            expect(docs.length).to.equal(1);
+          })
+          .then(function () {
+            return db.collection('Wheel')
+              .find({_id: '00000000-0000-4000-a000-000000000666'}).toArray();
+          })
+          .then(function (docs) {
+            expect(docs.length).to.equal(1);
+          })
+          .then(function () {
+            return db.collection('Vehicle')
+              .find({_id: '00000000-0000-4000-a000-000000000777'}).toArray();
+          })
+          .then(function (docs) {
+            expect(docs.length).to.equal(1);
+          });
+      });
   });
-
 });

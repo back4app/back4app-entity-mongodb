@@ -266,7 +266,8 @@ function deleteObject(entityObject) {
     EntityClass = entityObject.Entity;
     var entitySpecializations = EntityClass.specializations;
     for (var specialization in entitySpecializations) {
-      promises.push(_deleteObject(entitySpecializations[specialization], entityObject.id));
+      promises.push
+      (_deleteObject(entitySpecializations[specialization], entityObject.id));
     }
 
     Promise.all(promises)
@@ -277,12 +278,15 @@ function deleteObject(entityObject) {
       return mongoAdapter
         .getDatabase()
         .then(function (database) {
-          return database.collection(EntityClass.specification.name).findOneAndDelete({_id: id});
+          return database
+            .collection(EntityClass.specification.name)
+            .findOneAndDelete({_id: id});
+
         })
         .then(function (result) {
           expect(result.ok).to.equal(
             1,
-            'Invalid result.lastErrorObject.n return of collection.findOneAndDelete ' +
+            'Invalid result.ok return of collection.findOneAndDelete ' +
             'in MongoDB driver when deleting an Object (it should be 1)'
           );
         });
