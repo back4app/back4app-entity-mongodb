@@ -6,6 +6,8 @@ var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var classes = require('@back4app/back4app-entity').utils.classes;
 var Adapter = require('@back4app/back4app-entity').adapters.Adapter;
+var entity = require('@back4app/back4app-entity');
+var Entity = entity.models.Entity;
 
 module.exports = MongoAdapter;
 
@@ -14,6 +16,15 @@ module.exports = MongoAdapter;
  * @constructor
  * @memberof module:back4app-entity-mongodb
  * @extends {module:back4app-entity/adapters.Adapter}
+ * @param {!string} connectionUrl The connection url for MongoDB as specified in
+ * {@link
+ * https://mongodb.github.io/node-mongodb-native/api-generated/mongoclient.html
+ * }.
+ * @param {?Object} [connectionOptions] The optional connection parameter for
+ * MongoDB as specified in
+ * {@link
+ * https://mongodb.github.io/node-mongodb-native/api-generated/mongoclient.html
+ * }.
  * @example
  * require('back4app-entity').settings.ADAPTERS = {
  *   default: new MongoAdapter('127.0.0.1', '51764')
@@ -22,172 +33,195 @@ module.exports = MongoAdapter;
 function MongoAdapter(connectionUrl, connectionOptions) {
   Adapter.call(this);
 
-  /**
-   * The connection url for MongoDB as specified in
-   * {@link
-   *https://mongodb.github.io/node-mongodb-native/api-generated/mongoclient.html
-   * }.
-   * @type {string}
-   */
-  this.connectionUrl = connectionUrl;
-  /**
-   * The optional connection parameter for MongoDB as specified in
-   * {@link
-   *https://mongodb.github.io/node-mongodb-native/api-generated/mongoclient.html
-   * }.
-   * @type {Object}
-   */
-  this.connectionOptions = connectionOptions;
-  /**
-   * The actual MongoDB database object. It is set after connecting to MongoDB.
-   * @type {Object}
-   */
-  this.database = null;
+  var _database = null;
+  var _databaseIsLocked = false;
+  var _databaseRequestQueue = [];
 
-  expect(arguments).to.have.length.below(
-    3,
+  this.getDatabase = getDatabase;
+  this.openConnection = openConnection;
+  this.closeConnection = closeConnection;
+
+  expect(arguments).to.have.length.within(
+    1,
+    2,
     'Invalid arguments length when creating a new MongoAdapter ' +
-    '(it has to be passed less than 3 arguments)'
+    '(it has to be passed from 1 to 2 arguments)'
   );
+
+  expect(connectionUrl).to.be.a(
+    'string',
+    'Invalid argument "connectionUrl" when creating a new MongoAdapter  (it ' +
+    'has to be a string)'
+  );
+
+  if (connectionOptions) {
+    expect(connectionOptions).to.be.a(
+      'object',
+      'Invalid argument "connectionOptions" when creating a new MongoAdapter ' +
+      '(it has to be an object)'
+    );
+  } else {
+    connectionOptions = null;
+  }
+
+  function getDatabase() {
+    var mongoAdapter = this;
+
+    expect(arguments).to.have.length(
+      0,
+      'Invalid arguments length when getting a database in a MongoAdapter ' +
+      '(it has to be passed no arguments)'
+    );
+
+    return new Promise(function (resolve, reject) {
+      if (_databaseIsLocked || !_database) {
+        mongoAdapter
+          .openConnection()
+          .then(function () {
+            resolve(_database);
+          })
+          .catch(function (error) {
+            reject(error);
+          });
+      } else {
+        resolve(_database);
+      }
+    });
+  }
+
+  /**
+   * Connects the adapter with the targeted Mongo database.
+   * @name module:back4app-entity-mongodb.MongoAdapter#openConnection
+   * @function
+   * @returns {Promise.<undefined|Error>} Promise that returns nothing if
+   * succeed and the Error if failed.
+   * @example
+   * mongoAdapter.openConnection()
+   *   .then(function () {
+ *     console.log('success');
+ *   })
+   *   .catch(function (error) {
+ *     console.log(error);
+ *   });
+   */
+  function openConnection() {
+    expect(arguments).to.have.length(
+      0,
+      'Invalid arguments length when opening a connection in a MongoAdapter ' +
+      '(it has to be passed no arguments)'
+    );
+
+    return new Promise(function (resolve, reject) {
+      if (_databaseIsLocked) {
+        _databaseRequestQueue.push(function () {
+          openConnection().then(resolve).catch(reject);
+        });
+      } else if (_database) {
+        resolve();
+      } else {
+        _databaseIsLocked = true;
+
+        MongoClient
+          .connect(connectionUrl, connectionOptions)
+          .then(function (database) {
+            _database = database;
+            _databaseIsLocked = false;
+            resolve();
+            _processDatabaseRequestQueue();
+          })
+          .catch(function (error) {
+            _databaseIsLocked = false;
+            reject(error);
+            _processDatabaseRequestQueue();
+          });
+      }
+    });
+  }
+
+  /**
+   * Closes the current adapter' connection with MongoDB.
+   * @name module:back4app-entity-mongodb.MongoAdapter#closeConnection
+   * @function
+   * @returns {Promise.<undefined|Error>} Promise that returns nothing if
+   * succeed and the Error if failed.
+   * @example
+   * mongoAdapter.closeConnection()
+   *   .then(function (result) {
+   *     console.log(result);
+   *   })
+   *   .catch(function (error) {
+   *     console.log(error);
+   *   });
+   */
+  function closeConnection() {
+    expect(arguments).to.have.length(
+      0,
+      'Invalid arguments length when closing a connection in a MongoAdapter ' +
+      '(it has to be passed no arguments)'
+    );
+
+    return new Promise(function (resolve, reject) {
+      if (_databaseIsLocked) {
+        _databaseRequestQueue.push(function () {
+          closeConnection()
+            .then(resolve)
+            .catch(reject);
+        });
+      } else if (!_database) {
+        resolve();
+      } else {
+        _databaseIsLocked = true;
+        _database
+          .close()
+          .then(function () {
+            _database = null;
+            _databaseIsLocked = false;
+            resolve();
+            _processDatabaseRequestQueue();
+          })
+          .catch(function (error) {
+            _databaseIsLocked = false;
+            reject(error);
+            _processDatabaseRequestQueue();
+          });
+      }
+    });
+  }
+
+  function _processDatabaseRequestQueue() {
+    while (_databaseRequestQueue.length > 0) {
+      _databaseRequestQueue.splice(0,1)[0]();
+    }
+  }
 }
 
 classes.generalize(Adapter, MongoAdapter);
 
-MongoAdapter.prototype.openConnection = openConnection;
-MongoAdapter.prototype.closeConnection = closeConnection;
+MongoAdapter.prototype.loadAttribute = loadAttribute;
+MongoAdapter.prototype.insertObject = insertObject;
 //MongoAdapter.prototype.instanceToJSON = instanceToJSON;
+MongoAdapter.prototype.deleteObject = deleteObject;
 
-/**
- * Connects the adapter with the targeted Mongo database.
- * @name module:back4app-entity-mongodb.MongoAdapter#openConnection
- * @function
- * @returns {Promise.<undefined|Error>} Promise that returns nothing if succeed
- * and the Error if failed.
- * @example
- * mongoAdapter.openConnection()
- *   .then(function () {
- *     console.log('success');
- *   })
- *   .catch(function (error) {
- *     console.log(error);
- *   });
- */
-function openConnection() {
-  var mongoAdapter = this;
+function loadAttribute(Entity, attribute) {
+  var dataName = attribute.getDataName(Entity.adapterName);
 
-  expect(arguments).to.have.length(
-    0,
-    'Invalid arguments length when opening a connection in a MongoAdapter ' +
-    '(it has to be passed no arguments)'
+  expect(dataName).to.not.match(
+    /^\$/,
+    'The dataName of an Attribute cannot start with "$" in a MongoAdapter'
   );
 
-  return new Promise(function (resolve, reject) {
-    expect(mongoAdapter.database).to.equal(
-      null,
-      'The connection is already opened'
-    );
-
-    expect(mongoAdapter.connectionUrl).to.be.a(
-      'string',
-      'Property "connectionUrl" has to be valid to open a connection in a ' +
-      'MongoAdapter (it has to be a string)'
-    );
-
-    if (mongoAdapter.connectionOptions) {
-      expect(mongoAdapter.connectionOptions).to.be.a(
-        'object',
-        'Property "connectionOptions" has to be valid to open a connection ' +
-        'in a MongoAdapter (it has to be an object)'
-      );
-    }
-
-    mongoAdapter.database = {};
-
-    try {
-      MongoClient.connect(
-        mongoAdapter.connectionUrl,
-        mongoAdapter.connectionOptions,
-        function (error, database) {
-          if (error === null && database) {
-            mongoAdapter.database = database;
-            resolve();
-          } else {
-            if (database) {
-              database.close(function () {
-                reject(error);
-              });
-            } else {
-              mongoAdapter.database = null;
-              reject(error);
-            }
-          }
-        }
-      );
-    } catch (e) {
-      mongoAdapter.database = null;
-      throw e;
-    }
-  });
+  expect(dataName).to.not.contain(
+    '.',
+    'The dataName of an Attribute cannot contain "." in a MongoAdapter'
+  );
 }
 
-/**
- * Closes the current adapter' connection with MongoDB.
- * @name module:back4app-entity-mongodb.MongoAdapter#closeConnection
- * @function
- * @returns {Promise.<undefined|Error>} Promise that returns nothing if
- * succeed and the Error if failed.
- * @example
- * mongoAdapter.closeConnection()
- *   .then(function (result) {
- *     console.log(result);
- *   })
- *   .catch(function (error) {
- *     console.log(error);
- *   });
- */
-function closeConnection() {
-  var mongoAdapter = this;
-
-  expect(arguments).to.have.length(
-    0,
-    'Invalid arguments length when closing a connection in a MongoAdapter ' +
-    '(it has to be passed no arguments)'
-  );
-
-  return new Promise(function (resolve, reject) {
-    expect(mongoAdapter.database).to.not.equal(
-      null,
-      'The connection is already closed'
-    );
-
-    expect(mongoAdapter.database).to.be.an(
-      'object',
-      'Property "database" has to be an object to be closed.'
-    );
-
-    expect(mongoAdapter.database).to.respondTo(
-      'close',
-      'Property "database" has to be an object with a function called ' +
-      '"close" to be closed.'
-    );
-
-    var database = mongoAdapter.database;
-    mongoAdapter.database = null;
-
-    try {
-      database.close(function (error) {
-        if (error === null) {
-          resolve();
-        } else {
-          mongoAdapter.database = database;
-          reject(error);
-        }
-      });
-    } catch (e) {
-      mongoAdapter.database = database;
-      throw e;
-    }
-  });
+function insertObject() {
+  return this
+    .getDatabase()
+    .then(function (database) {
+      return database;
+    });
 }
 
 //function instanceToJSON(instance) {
@@ -202,3 +236,61 @@ function closeConnection() {
 //
 //  return json;
 //}
+
+function deleteObject(entityObject) {
+
+  var mongoAdapter = this;
+
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when deleting an object in MongoAdapter ' +
+    '(it has to be passed 1 argument)'
+  );
+
+  return new Promise(function (resolve, reject) {
+    expect(entityObject).to.be.an.instanceOf(
+      Entity,
+      'Invalid argument "entityObject" when deleting an object in a ' +
+      'MongoAdapter (it has to be an Entity instance)'
+    );
+
+    var EntityClass = entityObject.Entity;
+
+    var promises = [];
+
+    while (EntityClass) {
+      promises.push(_deleteObject(EntityClass, entityObject.id));
+      EntityClass = EntityClass.General;
+    }
+
+    EntityClass = entityObject.Entity;
+    var entitySpecializations = EntityClass.specializations;
+    for (var specialization in entitySpecializations) {
+      promises.push
+      (_deleteObject(entitySpecializations[specialization], entityObject.id));
+    }
+
+    Promise.all(promises)
+      .then(resolve)
+      .catch(reject);
+
+    function _deleteObject(EntityClass, id) {
+      return mongoAdapter
+        .getDatabase()
+        .then(function (database) {
+          return database
+            .collection(EntityClass.specification.name)
+            .findOneAndDelete({_id: id});
+
+        })
+        .then(function (result) {
+          expect(result.ok).to.equal(
+            1,
+            'Invalid result.ok return of collection.findOneAndDelete ' +
+            'in MongoDB driver when deleting an Object (it should be 1)'
+          );
+        });
+    }
+
+  });
+}

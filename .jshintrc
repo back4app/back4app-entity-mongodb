@@ -28,6 +28,7 @@
     // global for tests
     "it": false,
     "beforeEach": false,
+    "afterEach": false,
     "describe": false,
     "before": false,
     "after": false,

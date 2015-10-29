@@ -7,7 +7,11 @@
 var chai = require('chai');
 var expect = chai.expect;
 var AssertionError = chai.AssertionError;
-var Promisse = require('bluebird');
+var Promise = require('bluebird');
+var mongodb = require('mongodb');
+var MongoError = mongodb.MongoError;
+var Db = mongodb.Db;
+var Collection = mongodb.Collection;
 var entity = require('@back4app/back4app-entity');
 var settings = entity.settings;
 var classes = entity.utils.classes;
@@ -22,12 +26,23 @@ describe('MongoAdapter', function () {
   var mongoAdapter = null;
 
   it('expect to be instantiable', function () {
-    mongoAdapter = new MongoAdapter();
     mongoAdapter = new MongoAdapter('');
     mongoAdapter = new MongoAdapter('', {});
   });
 
   it('expect to not work with wrong arguments', function () {
+    expect(function () {
+      mongoAdapter = new MongoAdapter();
+    }).to.throw(AssertionError);
+
+    expect(function () {
+      mongoAdapter = new MongoAdapter({});
+    }).to.throw(AssertionError);
+
+    expect(function () {
+      mongoAdapter = new MongoAdapter('', function () {});
+    }).to.throw(AssertionError);
+
     expect(function () {
       mongoAdapter = new MongoAdapter('', {}, null);
     }).to.throw(AssertionError);
@@ -35,6 +50,8 @@ describe('MongoAdapter', function () {
 
   it('expect to be an instance of Adapter', function () {
     expect(classes.isGeneral(Adapter, MongoAdapter));
+
+    expect(mongoAdapter).to.be.an.instanceOf(Adapter);
   });
 
   describe('#openConnection', function () {
@@ -44,39 +61,15 @@ describe('MongoAdapter', function () {
       }).to.throw(AssertionError);
     });
 
-    it('expect to not work when in invalid state', function (done) {
-      mongoAdapter = new MongoAdapter();
-      mongoAdapter.openConnection()
-        .catch(function (error) {
-          expect(error).to.be.an.instanceOf(AssertionError);
-
-          mongoAdapter = new MongoAdapter({});
-          mongoAdapter.openConnection()
-            .catch(function (error) {
-              expect(error).to.be.an.instanceOf(AssertionError);
-
-              mongoAdapter = new MongoAdapter(
-                'mongodb://127.0.0.1:27017',
-                function () {}
-              );
-              mongoAdapter.openConnection()
-                .catch(function (error) {
-                  expect(error).to.be.an.instanceOf(AssertionError);
-                  done();
-                });
-            });
-        });
-    });
-
     it('expect to resolve with right connection', function (done) {
       var promise =  defaultAdapter.openConnection();
-      expect(promise).to.be.an.instanceOf(Promisse);
-      promise.then(function (result) {
-        expect(result).to.be.an('undefined');
-        defaultAdapter.closeConnection().then(function () {
-          done();
-        });
-      });
+      expect(promise).to.be.an.instanceOf(Promise);
+      promise
+        .then(function (result) {
+          expect(result).to.be.an('undefined');
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
     });
 
     it('expect to reject with invalid parameters', function (done) {
@@ -84,7 +77,7 @@ describe('MongoAdapter', function () {
         '', {}
       );
       var promise = mongoAdapter.openConnection();
-      expect(promise).to.be.an.instanceOf(Promisse);
+      expect(promise).to.be.an.instanceOf(Promise);
       promise.catch(function (error) {
         expect(error).to.be.an.instanceOf(Error);
         done();
@@ -97,31 +90,46 @@ describe('MongoAdapter', function () {
         'mongodb://127.0.0.1:6969?connectTimeoutMS=1000'
       );
       var promise = mongoAdapter.openConnection();
-      expect(promise).to.be.an.instanceOf(Promisse);
+      expect(promise).to.be.an.instanceOf(Promise);
       promise.catch(function (error) {
-        expect(error).to.be.an.instanceOf(Error);
+        expect(error).to.be.an.instanceOf(MongoError);
         done();
       });
     });
 
-    it('expect to not connect twice', function (done) {
-      defaultAdapter.openConnection().then(function () {
-        defaultAdapter.openConnection().catch(function (error) {
-          expect(error).to.be.an.instanceOf(AssertionError);
-          defaultAdapter.closeConnection().then(function () {
-            done();
-          });
-        });
-      });
-
-      defaultAdapter.openConnection()
+    it('expect to work if already opened', function (done) {
+      defaultAdapter
+        .openConnection()
         .then(function () {
-          throw new Error();
+          return defaultAdapter.openConnection();
         })
-        .catch(function (error) {
-          expect(error).to.be.an.instanceOf(AssertionError);
-        }
-      );
+        .then(function () {
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
+    });
+
+    it('expect to work if asked to open many times', function (done) {
+      var total = 10;
+      var counter = 0;
+
+      for (var i = 0; i < total; i++) {
+        open();
+      }
+
+      function open() {
+        defaultAdapter
+          .openConnection()
+          .then(function () {
+            return defaultAdapter.closeConnection();
+          })
+          .then(function () {
+            counter++;
+            if (counter === total) {
+              done();
+            }
+          });
+      }
     });
   });
 
@@ -132,33 +140,10 @@ describe('MongoAdapter', function () {
       }).to.throw(AssertionError);
     });
 
-    it('expect to not work when in invalid state', function (done) {
-      mongoAdapter = new MongoAdapter();
-      mongoAdapter.closeConnection()
-        .catch(function (error) {
-          expect(error).to.be.an.instanceOf(AssertionError);
-
-          mongoAdapter = new MongoAdapter();
-          mongoAdapter.database = function () {};
-          mongoAdapter.closeConnection()
-            .catch(function (error) {
-              expect(error).to.be.an.instanceOf(AssertionError);
-
-              mongoAdapter = new MongoAdapter();
-              mongoAdapter.database = {};
-              mongoAdapter.closeConnection()
-                .catch(function (error) {
-                  expect(error).to.be.an.instanceOf(AssertionError);
-                  done();
-                });
-            });
-        });
-    });
-
-    it('expect to resolve with valid state', function (done) {
+    it('expect to resolve', function (done) {
       defaultAdapter.openConnection().then(function () {
         var promise = defaultAdapter.closeConnection();
-        expect(promise).to.be.an.instanceOf(Promisse);
+        expect(promise).to.be.an.instanceOf(Promise);
         promise.then(function (result) {
           expect(result).to.be.an('undefined');
           done();
@@ -166,23 +151,244 @@ describe('MongoAdapter', function () {
       });
     });
 
-    it('expect to not close twice', function (done) {
-      defaultAdapter.openConnection().then(function () {
-        defaultAdapter.closeConnection().then(function () {
-          defaultAdapter.closeConnection().catch(function (error) {
-            expect(error).to.be.an.instanceOf(AssertionError);
-            done();
-          });
+    it('expect to work if still opening', function (done) {
+      defaultAdapter
+        .openConnection();
+
+      defaultAdapter
+        .closeConnection()
+        .then(done);
+    });
+
+    it('expect to work if already closed', function (done) {
+      defaultAdapter
+        .openConnection()
+        .then(function () {
+          return defaultAdapter.closeConnection();
+        })
+        .then(function () {
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
+    });
+
+    it('expect to work if asked to close many times', function (done) {
+      defaultAdapter
+        .openConnection()
+        .then(function () {
+          var total = 10;
+          var counter = 0;
+
+          for (var i = 0; i < total; i++) {
+            close();
+          }
+
+          function close() {
+            defaultAdapter
+              .closeConnection()
+              .then(function () {
+                counter++;
+                if (counter === total) {
+                  done();
+                }
+              });
+          }
+        });
+    });
+  });
+
+  describe('#getDatabase', function () {
+    it('expect to not work with wrong arguments', function () {
+      expect(function () {
+        defaultAdapter.getDatabase(null);
+      }).to.throw(AssertionError);
+    });
+
+    it('expect to resolve with right arguments', function (done) {
+      var promise = defaultAdapter.getDatabase();
+      expect(promise).to.be.an.instanceOf(Promise);
+      promise
+        .then(function (database) {
+          expect(database).to.be.an.instanceOf(Db);
+          return database.createCollection('MongoAdapter#getDatabase');
+        })
+        .then(function (collection) {
+          expect(collection).to.be.an.instanceOf(Collection);
+          return collection.drop();
+        })
+        .then(function (result) {
+          expect(result).to.equal(true);
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
+    });
+
+    it('expect to reject with invalid parameters', function (done) {
+      mongoAdapter = new MongoAdapter(
+        '', {}
+      );
+      var promise = mongoAdapter.getDatabase();
+      expect(promise).to.be.an.instanceOf(Promise);
+      promise.catch(function (error) {
+        expect(error).to.be.an.instanceOf(Error);
+        done();
+      });
+    });
+
+    it('expect to reject with wrong connection', function (done) {
+      this.timeout(2000);
+      mongoAdapter = new MongoAdapter(
+        'mongodb://127.0.0.1:6969?connectTimeoutMS=1000'
+      );
+      var promise = mongoAdapter.getDatabase();
+      expect(promise).to.be.an.instanceOf(Promise);
+      promise.catch(function (error) {
+        expect(error).to.be.an.instanceOf(MongoError);
+        done();
+      });
+    });
+
+    it('expect to work if already opened', function (done) {
+      defaultAdapter
+        .openConnection()
+        .then(function () {
+          return defaultAdapter.getDatabase();
+        })
+        .then(function (database) {
+          expect(database).to.be.an.instanceOf(Db);
+          return database.createCollection('MongoAdapter#getDatabase');
+        })
+        .then(function (collection) {
+          expect(collection).to.be.an.instanceOf(Collection);
+          return collection.drop();
+        })
+        .then(function (result) {
+          expect(result).to.equal(true);
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
+    });
+
+    it('expect to work if still opening', function (done) {
+      defaultAdapter.openConnection();
+      defaultAdapter.getDatabase()
+        .then(function (database) {
+          expect(database).to.be.an.instanceOf(Db);
+          return database.createCollection('MongoAdapter#getDatabase');
+        })
+        .then(function (collection) {
+          expect(collection).to.be.an.instanceOf(Collection);
+          return collection.drop();
+        })
+        .then(function (result) {
+          expect(result).to.equal(true);
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
+    });
+
+    it('expect to work if closed', function (done) {
+      defaultAdapter
+        .openConnection()
+        .then(function () {
+          return defaultAdapter.closeConnection();
+        })
+        .then(function () {
+          return defaultAdapter.getDatabase();
+        })
+        .then(function (database) {
+          expect(database).to.be.an.instanceOf(Db);
+          return database.createCollection('MongoAdapter#getDatabase');
+        })
+        .then(function (collection) {
+          expect(collection).to.be.an.instanceOf(Collection);
+          return collection.drop();
+        })
+        .then(function (result) {
+          expect(result).to.equal(true);
+          return defaultAdapter.closeConnection();
+        })
+        .then(done);
+    });
+
+    it('expect to work if closing', function (done) {
+      defaultAdapter
+        .openConnection()
+        .then(function () {
+          defaultAdapter.closeConnection();
+          defaultAdapter
+            .getDatabase()
+            .then(function (database) {
+              expect(database).to.be.an.instanceOf(Db);
+              return database.createCollection('MongoAdapter#getDatabase');
+            })
+            .then(function (collection) {
+              expect(collection).to.be.an.instanceOf(Collection);
+              return collection.drop();
+            })
+            .then(function (result) {
+              expect(result).to.equal(true);
+              return defaultAdapter.closeConnection();
+            })
+            .then(done);
+        });
+    });
+
+    it('expect to work many times', function (done) {
+      var total = 10;
+      var counter = 0;
+
+      defaultAdapter
+        .getDatabase()
+        .then(function (database) {
+          expect(database).to.be.an.instanceOf(Db);
+          return database.createCollection('MongoAdapter#getDatabase');
+        })
+        .then(function (collection) {
+          expect(collection).to.be.an.instanceOf(Collection);
+          for (var i = 0; i < total; i++) {
+            work();
+          }
         });
 
-        defaultAdapter.closeConnection()
-          .then(function () {
-            throw new Error();
+      function work() {
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            expect(database).to.be.an.instanceOf(Db);
+            return new Promise(function (resolve) {
+              database.collection(
+                'MongoAdapter#getDatabase',
+                {
+                  strict: true
+                },
+                function (error, collection) {
+                  expect(error).to.equal(null);
+                  resolve(collection);
+                }
+              );
+            });
           })
-          .catch(function (error) {
-            expect(error).to.be.an.instanceOf(AssertionError);
+          .then(function (collection) {
+            expect(collection).to.be.an.instanceOf(Collection);
+          })
+          .then(function () {
+            counter++;
+            if (counter === total) {
+              defaultAdapter
+                .getDatabase()
+                .then(function (database) {
+                  expect(database).to.be.an.instanceOf(Db);
+                  return database.dropCollection('MongoAdapter#getDatabase');
+                })
+                .then(function (result) {
+                  expect(result).to.equal(true);
+                  return defaultAdapter.closeConnection();
+                })
+                .then(done);
+            }
           });
-      });
+      }
     });
   });
 });
