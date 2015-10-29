@@ -4,9 +4,12 @@ var expect = require('chai').expect;
 var Promise = require('bluebird');
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
-var classes = require('@back4app/back4app-entity').utils.classes;
-var objects = require('@back4app/back4app-entity').utils.objects;
-var Adapter = require('@back4app/back4app-entity').adapters.Adapter;
+var entity = require('@back4app/back4app-entity');
+var classes = entity.utils.classes;
+var objects = entity.utils.objects;
+var Adapter = entity.adapters.Adapter;
+var Entity = entity.models.Entity;
+var AssociationAttribute = entity.models.attributes.types.AssociationAttribute;
 
 var QueryError = require('./errors').QueryError;
 
@@ -245,13 +248,21 @@ function getObject(EntityClass, query) {
   function findDocument(db) {
     // copy query to not mess with user's object
     query = objects.copy(query);
+
     // rename id field
     if (query.hasOwnProperty('id')) {
       query._id = query.id;
       delete query.id;
     }
+
+    // find collection name
+    var GeneralClass = EntityClass;
+    while (GeneralClass.General !== Entity) {
+      GeneralClass = GeneralClass.General;
+    }
+    var name = GeneralClass.specification.name;
+
     // perform query
-    var name = EntityClass.specification.name;
     cursor = db.collection(name).find(query);
     return cursor.next();
   }
@@ -277,8 +288,7 @@ function getObject(EntityClass, query) {
 
   function populateEntity() {
     // return populated entity
-    var attrs = documentToObject(document);
-    return new EntityClass(attrs);
+    return _documentToObject(document);
   }
 
   return this.getDatabase()
@@ -288,8 +298,8 @@ function getObject(EntityClass, query) {
     .then(populateEntity);
 }
 
-function documentToObject(doc) {
-  var obj = objects.copy(doc);
+function _documentToObject(document) {
+  var obj = objects.copy(document);
 
   // replace `_id` with `id`
   if (obj.hasOwnProperty('_id')) {
@@ -297,8 +307,31 @@ function documentToObject(doc) {
     delete obj._id;
   }
 
-  // remove `Entity`
+  // get document class and remove `Entity`
+  var EntityClass = Entity.getSpecialization(obj.Entity);
   delete obj.Entity;
 
-  return obj;
+  // loop through entity's attributes and replace associations with instances
+  var attributes = EntityClass.specification.attributes;
+  for (var attrName in attributes) {
+    if (attributes.hasOwnProperty(attrName) && obj.hasOwnProperty(attrName)) {
+      // check for association
+      var attr = attributes[attrName];
+      if (attr instanceof AssociationAttribute) {
+        var multiplicity = attr.multiplicity;
+        if (multiplicity === '1' || multiplicity === '0..1') {
+          // single related object
+          obj[attrName] = _documentToObject(obj[attrName]);
+        } else {
+          // array of related objects
+          var items = obj[attrName];
+          for (var i = 0; i < items.length; i++) {
+            items[i] = _documentToObject(items[i]);
+          }
+        }
+      }
+    }
+  }
+
+  return new EntityClass(obj);
 }

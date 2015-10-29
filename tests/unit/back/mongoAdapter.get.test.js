@@ -111,6 +111,12 @@ describe('MongoAdapter', function () {
           .and.instanceOf(Person);
       });
 
+      it('should get object by complex query', function () {
+        return expect(mongoAdapter.getObject(Person, {name: {$in: ['John', 'Theo']}, age: {$gt: 25}}))
+          .to.become(john)
+          .and.instanceOf(Person);
+      });
+
       it('should reject query with no result', function () {
         return expect(mongoAdapter.getObject(Person, {name: 'Nobody'}))
           .to.eventually.be.rejectedWith(QueryError);
@@ -130,17 +136,10 @@ describe('MongoAdapter', function () {
 
       beforeEach(function () {
         // populate test database
-        return Promise.all([
-          db.collection('Person').insertMany([
-            {Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true},
-            {Entity: 'Author', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, married: false},
-            {Entity: 'Author', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, married: false}
-          ]),
-          db.collection('Author').insertMany([
-            {Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true, readers: 1000},
-            {Entity: 'Author', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, married: false, readers: 450},
-            {Entity: 'Author', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, married: false, readers: 1000}
-          ])
+        return db.collection('Person').insertMany([// Author --> Person
+          {Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true, readers: 1000},
+          {Entity: 'Author', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7', name: 'Theo', age: 20, married: false, readers: 450},
+          {Entity: 'Author', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f', name: 'Will', age: 30, married: false, readers: 1000}
         ]);
       });
 
@@ -173,19 +172,73 @@ describe('MongoAdapter', function () {
           .and.instanceOf(Author);
       });
 
+      it('should get object using parent\'s class', function () {
+        return expect(mongoAdapter.getObject(Person, {id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'}))
+          .to.become(john)
+          .and.instanceOf(Author);
+      });
+
       it('should reject query with no result', function () {
-        return expect(mongoAdapter.getObject(Person, {name: 'Nobody'}))
+        return expect(mongoAdapter.getObject(Author, {name: 'Nobody'}))
           .to.eventually.be.rejectedWith(QueryError);
       });
 
       it('should reject query with multiple results', function () {
-        return expect(mongoAdapter.getObject(Person, {}))
+        return expect(mongoAdapter.getObject(Author, {}))
           .to.eventually.be.rejectedWith(QueryError);
       });
     });
 
     describe('objects with association', function () {
+      // back4app entity instances
+      var john = new Author({
+        id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true, readers: 1000,
+        // books not populated
+        books: [
+          new Book({id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}), // Dracula
+          new Book({id: '1da78d86-de7a-4818-8737-e5723afdca85'}) // Hamlet
+        ]
+      });
 
+      beforeEach(function () {
+        // populate test database
+        return Promise.all([
+          db.collection('Book').insertMany([
+            {Entity: 'Book', _id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d', title: 'Dracula', publishedAt: new Date('1986-05-12')},
+            {Entity: 'Book', _id: '1da78d86-de7a-4818-8737-e5723afdca85', title: 'Hamlet', publishedAt: new Date('2005-08-01')}
+          ]),
+          db.collection('Person').insertOne({// Author --> Person
+            Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0', name: 'John', age: 30, married: true, readers: 1000,
+            books: [
+              {Entity: 'Book', id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}, // Dracula
+              {Entity: 'Book', id: '1da78d86-de7a-4818-8737-e5723afdca85'} // Hamlet
+            ]
+          })
+        ]);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should get object by id', function () {
+        return expect(mongoAdapter.getObject(Author, {id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'}))
+          .to.become(john)
+          .and.instanceOf(Author);
+      });
+
+      it('should get object using parent\'s class', function () {
+        return expect(mongoAdapter.getObject(Person, {id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'}))
+          .to.become(john)
+          .and.instanceOf(Author);
+      });
+
+      it('should get object by association id', function () {
+        return expect(mongoAdapter.getObject(Author, {'books.id': '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}))
+          .to.become(john)
+          .and.instanceOf(Author);
+      });
     });
   });
 });
