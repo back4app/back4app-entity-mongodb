@@ -6,9 +6,11 @@ var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var entity = require('@back4app/back4app-entity');
 var classes = entity.utils.classes;
-var Entity = entity.models.Entity;
-var Attribute = entity.models.attributes.Attribute;
 var Adapter = entity.adapters.Adapter;
+var Entity = entity.models.Entity;
+var attributes = entity.models.attributes;
+var Attribute = attributes.Attribute;
+var AssociationAttribute = attributes.types.AssociationAttribute;
 
 module.exports = MongoAdapter;
 
@@ -348,7 +350,15 @@ function objectToDocument(entityObject, EntityClass) {
     var attribute = entitySpecificationAttributes[attributeName];
     var attributeDataName = attribute.getDataName(entityObject.adapterName);
     var attributeValue = attribute.getDataValue(entityObject[attributeName]);
-    document[attributeDataName] = attributeValue;
+
+    if (attribute instanceof AssociationAttribute) {
+      document[attributeDataName] = {
+        $ref: attribute.Entity.dataName,
+        $id: attributeValue.id
+      };
+    } else {
+      document[attributeDataName] = attributeValue;
+    }
   }
 
   document.Entity = entityObject.Entity.specification.name;
