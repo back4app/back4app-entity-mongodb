@@ -241,7 +241,25 @@ function insertObject() {
 //  return json;
 //}
 
+/**
+ * Get object from the database matching given query.
+ * @name module:back4app-entity-mongodb.MongoAdapter#getObject
+ * @function
+ * @returns {Promise.<object|Error>} Promise that returns found object if
+ * succeed or Error if failed.
+ * @example
+ * mongoAdapter.getObject(Car, {color: 'red'})
+ *   .then(function(car) {
+ *     console.log(car);
+ *   });
+ */
 function getObject(EntityClass, query) {
+  expect(arguments).to.have.length(
+    2,
+    'Invalid arguments length when inserting an object in a MongoAdapter ' +
+    '(it has to be passed 2 arguments)'
+  );
+
   var cursor;
   var document;
 
