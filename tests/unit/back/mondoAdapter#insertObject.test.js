@@ -28,12 +28,12 @@ describe('MongoAdapter#insertObject', function () {
       });
 
     expect(function () {
-      defaultAdapter.insertObject(new Entity(), null);
+      defaultAdapter.insertObject(Entity.specify('MyEntity'), null);
     }).to.throw(AssertionError);
   });
 
   it('expect to work with Entity instance', function (done) {
-    var entity = new Entity();
+    var entity = new (Entity.specify('EntityProxy'))();
 
     defaultAdapter
       .insertObject(entity)
@@ -42,7 +42,7 @@ describe('MongoAdapter#insertObject', function () {
       })
       .then(function (database) {
         return database
-          .collection('Entity')
+          .collection('EntityProxy')
           .find({_id: entity.id}).toArray();
       })
       .then(function (documents) {
@@ -51,6 +51,16 @@ describe('MongoAdapter#insertObject', function () {
         expect(documents[0]).to.deep.equal(
           defaultAdapter.objectToDocument(entity)
         );
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('EntityProxy')
+          .deleteOne({
+            _id: entity.id
+          });
+      })
+      .then(function (documents) {
         return defaultAdapter.getDatabase();
       })
       .then(function (database) {
@@ -141,8 +151,8 @@ describe('MongoAdapter#insertObject', function () {
   it(
     'expect to work with all attribute types (association is not in this test)',
     function (done) {
-      var MyEntity = Entity.specify({
-        name: 'MyEntity',
+      var MyEntity2 = Entity.specify({
+        name: 'MyEntity2',
         attributes: {
           booleanAttribute: {
             type: 'Boolean'
@@ -162,7 +172,7 @@ describe('MongoAdapter#insertObject', function () {
         }
       });
 
-      var myEntity = new MyEntity({
+      var myEntity = new MyEntity2({
         booleanAttribute: true,
         dateAttribute: new Date(),
         numberAttribute: 123456.7890,
@@ -203,7 +213,7 @@ describe('MongoAdapter#insertObject', function () {
         })
         .then(function (database) {
           return database
-            .collection('MyEntity')
+            .collection('MyEntity2')
             .find({_id: myEntity.id}).toArray();
         })
         .then(function (documents) {
@@ -212,14 +222,14 @@ describe('MongoAdapter#insertObject', function () {
           expect(documents[0]).to.deep.equal(
             defaultAdapter.objectToDocument(
               myEntity,
-              MyEntity
+              MyEntity2
             )
           );
           return defaultAdapter.getDatabase();
         })
         .then(function (database) {
           return database
-            .collection('MyEntity')
+            .collection('MyEntity2')
             .deleteOne({
               _id: myEntity.id
             });

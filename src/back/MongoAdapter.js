@@ -10,7 +10,6 @@ var Adapter = entity.adapters.Adapter;
 var Entity = entity.models.Entity;
 var attributes = entity.models.attributes;
 var Attribute = attributes.Attribute;
-var AssociationAttribute = attributes.types.AssociationAttribute;
 
 module.exports = MongoAdapter;
 
