@@ -352,30 +352,6 @@ function objectToDocument(entityObject, EntityClass) {
     var attributeDataValue = attribute.getDataValue(
       entityObject[attributeName]
     );
-
-    if (attribute instanceof AssociationAttribute) {
-      if (
-        attribute.multiplicity === '*' ||
-        attribute.multiplicity === '1..*'
-      ) {
-        var newAttributeDataValue = [];
-
-        for (var i = 0; i < attributeDataValue.length; i++) {
-          newAttributeDataValue.push({
-            Entity: attributeDataValue[i].Entity,
-            id: attributeDataValue[i].id
-          });
-
-          attributeDataValue = newAttributeDataValue;
-        }
-      } else {
-        attributeDataValue = {
-          Entity: attributeDataValue.Entity,
-          id: attributeDataValue.id
-        };
-      }
-    }
-
     document[attributeDataName] = attributeDataValue;
   }
 

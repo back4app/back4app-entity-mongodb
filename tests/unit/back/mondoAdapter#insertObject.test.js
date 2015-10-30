@@ -429,9 +429,97 @@ describe('MongoAdapter#insertObject', function () {
   });
 
   it('expect to insert foreign keys correctly', function (done) {
-    //var Using = Entity.specify('Using');
-    //var Used = Entity.specify('Used');
-    done();
+    var Used = Entity.specify('Used');
+
+    var Using = Entity.specify(
+      'Using',
+      {
+        usage: {
+          type: 'Used'
+        },
+        usages: {
+          type: 'Used',
+          multiplicity: '1..*'
+        }
+      }
+    );
+
+    var usage = new Used();
+    var usages1 = new Used();
+    var usages2 = new Used();
+
+    var using = new Using({
+      usage: usage,
+      usages: [
+        usages1,
+        usages2
+      ]
+    });
+
+    var promises = [];
+    promises.push(defaultAdapter.insertObject(usage));
+    promises.push(defaultAdapter.insertObject(usages1));
+    promises.push(defaultAdapter.insertObject(usages2));
+    promises.push(defaultAdapter.insertObject(using));
+
+    Promise
+      .all(promises)
+      .then(function () {
+        defaultAdapter
+          .getDatabase()
+          .then(function (database) {
+            return database
+              .collection('Using')
+              .find()
+              .toArray();
+          })
+          .then(function (documents) {
+            expect(documents).to.deep.equal([
+              defaultAdapter.objectToDocument(using)
+            ]);
+
+            expect(documents[0].usage).to.deep.equal(
+              {
+                Entity: usage.Entity.specification.name,
+                id: usage.id
+              }
+            );
+            expect(documents[0].usages).to.deep.equal([
+              {
+                Entity: usages1.Entity.specification.name,
+                id: usages1.id
+              },
+              {
+                Entity: usages2.Entity.specification.name,
+                id: usages2.id
+              }
+            ]);
+          })
+          .then(function () {
+            var promises = [];
+
+            promises.push(
+              defaultAdapter
+                .getDatabase()
+                .then(function (database) {
+                  return database.collection('Used').deleteMany({});
+                })
+            );
+
+            promises.push(
+              defaultAdapter
+                .getDatabase()
+                .then(function (database) {
+                  return database.collection('Using').deleteMany({});
+                })
+            );
+
+            return Promise.all(promises);
+          })
+          .then(function () {
+            done();
+          });
+      });
   });
 
   after(function (done) {
