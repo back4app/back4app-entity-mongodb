@@ -1,3 +1,7 @@
+// TODO: review these tests and remove file
+return;
+
+
 /**
  * Created by walkirya on 21/10/15.
  */
