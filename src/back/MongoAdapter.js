@@ -206,6 +206,7 @@ MongoAdapter.prototype.insertObject = insertObject;
 //MongoAdapter.prototype.instanceToJSON = instanceToJSON;
 MongoAdapter.prototype.getObject = getObject;
 MongoAdapter.prototype.findObjects = findObjects;
+MongoAdapter.prototype.deleteObject = deleteObject;
 
 function loadAttribute(Entity, attribute) {
   var dataName = attribute.getDataName(Entity.adapterName);
@@ -397,4 +398,62 @@ function _documentToObject(document) {
   }
 
   return new EntityClass(obj);
+}
+
+function deleteObject(entityObject) {
+
+  var mongoAdapter = this;
+
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when deleting an object in MongoAdapter ' +
+    '(it has to be passed 1 argument)'
+  );
+
+  return new Promise(function (resolve, reject) {
+    expect(entityObject).to.be.an.instanceOf(
+      Entity,
+      'Invalid argument "entityObject" when deleting an object in a ' +
+      'MongoAdapter (it has to be an Entity instance)'
+    );
+
+    var EntityClass = entityObject.Entity;
+
+    var promises = [];
+
+    while (EntityClass) {
+      promises.push(_deleteObject(EntityClass, entityObject.id));
+      EntityClass = EntityClass.General;
+    }
+
+    EntityClass = entityObject.Entity;
+    var entitySpecializations = EntityClass.specializations;
+    for (var specialization in entitySpecializations) {
+      promises.push
+      (_deleteObject(entitySpecializations[specialization], entityObject.id));
+    }
+
+    Promise.all(promises)
+      .then(resolve)
+      .catch(reject);
+
+    function _deleteObject(EntityClass, id) {
+      return mongoAdapter
+        .getDatabase()
+        .then(function (database) {
+          return database
+            .collection(EntityClass.specification.name)
+            .findOneAndDelete({_id: id});
+
+        })
+        .then(function (result) {
+          expect(result.ok).to.equal(
+            1,
+            'Invalid result.ok return of collection.findOneAndDelete ' +
+            'in MongoDB driver when deleting an Object (it should be 1)'
+          );
+        });
+    }
+
+  });
 }
