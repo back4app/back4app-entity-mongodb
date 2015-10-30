@@ -4,10 +4,12 @@ var expect = require('chai').expect;
 var Promise = require('bluebird');
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
-var classes = require('@back4app/back4app-entity').utils.classes;
-var Adapter = require('@back4app/back4app-entity').adapters.Adapter;
 var entity = require('@back4app/back4app-entity');
+var classes = entity.utils.classes;
+var Adapter = entity.adapters.Adapter;
 var Entity = entity.models.Entity;
+var attributes = entity.models.attributes;
+var Attribute = attributes.Attribute;
 
 module.exports = MongoAdapter;
 
@@ -80,9 +82,7 @@ function MongoAdapter(connectionUrl, connectionOptions) {
           .then(function () {
             resolve(_database);
           })
-          .catch(function (error) {
-            reject(error);
-          });
+          .catch(reject);
       } else {
         resolve(_database);
       }
@@ -197,12 +197,65 @@ function MongoAdapter(connectionUrl, connectionOptions) {
 
 classes.generalize(Adapter, MongoAdapter);
 
-MongoAdapter.prototype.loadAttribute = loadAttribute;
+MongoAdapter.prototype.loadEntity = loadEntity;
+MongoAdapter.prototype.loadEntityAttribute = loadEntityAttribute;
 MongoAdapter.prototype.insertObject = insertObject;
-//MongoAdapter.prototype.instanceToJSON = instanceToJSON;
 MongoAdapter.prototype.deleteObject = deleteObject;
+MongoAdapter.prototype.objectToDocument = objectToDocument;
 
-function loadAttribute(Entity, attribute) {
+function loadEntity(Entity) {
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when loading an entity in a ' +
+    'MongoAdapter (it has to be passed 1 argument)'
+  );
+
+  expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
+    true,
+    'Invalid argument "Entity" when loading an entity in a ' +
+    'MongoAdapter (it has to be an Entity class)'
+  );
+
+  expect(Entity.dataName).to.not.equal(
+    '',
+    'The dataName of an Entity cannot be an empty string in a MongoAdapter'
+  );
+
+  expect(Entity.dataName).to.not.match(
+    /^system\./,
+    'The dataName of an Entity cannot start with "system." in a MongoAdapter'
+  );
+
+  expect(Entity.dataName).to.not.contain(
+    '$',
+    'The dataName of an Entity cannot contain "$" in a MongoAdapter'
+  );
+
+  expect(Entity.dataName).to.not.contain(
+    '\0',
+    'The dataName of an Entity cannot contain "\0" in a MongoAdapter'
+  );
+}
+
+function loadEntityAttribute(Entity, attribute) {
+  expect(arguments).to.have.length(
+    2,
+    'Invalid arguments length when loading an entity attribute in a ' +
+    'MongoAdapter (it has to be passed 2 arguments)'
+  );
+
+  expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
+    true,
+    'Invalid argument "Entity" when loading an entity attribute in a ' +
+    'MongoAdapter (it has to be an Entity class)'
+  );
+
+  expect(attribute).to.be.an.instanceOf(
+    Attribute,
+    'Invalid argument "attribute" when loading an entity attribute in a ' +
+    'MongoAdapter (it has to be an Attribute instance)'
+  );
+
   var dataName = attribute.getDataName(Entity.adapterName);
 
   expect(dataName).to.not.match(
@@ -214,28 +267,75 @@ function loadAttribute(Entity, attribute) {
     '.',
     'The dataName of an Attribute cannot contain "." in a MongoAdapter'
   );
+
+  expect(dataName).to.not.contain(
+    '\0',
+    'The dataName of an Attribute cannot contain "\0" in a MongoAdapter'
+  );
+
+  expect(dataName).to.not.equal(
+    'Entity',
+    'The dataName of an Attribute cannot be equal to "Entity" in a MongoAdapter'
+  );
+
+  expect(dataName).to.not.equal(
+    '_id',
+    'The dataName of an Attribute cannot be equal to "_id" in a MongoAdapter'
+  );
 }
 
-function insertObject() {
-  return this
-    .getDatabase()
-    .then(function (database) {
-      return database;
-    });
-}
+function insertObject(entityObject) {
+  var mongoAdapter = this;
 
-//function instanceToJSON(instance) {
-//  var json = {};
-//  for (var key in instance.Entity.attributes) {
-//    json[key] = instance[key];
-//  }
-//
-//  if (instance.id) {
-//    json._id = instance.id;
-//  }
-//
-//  return json;
-//}
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when inserting an object in a MongoAdapter ' +
+    '(it has to be passed 1 argument)'
+  );
+
+  return new Promise(function (resolve, reject) {
+    expect(entityObject).to.be.an.instanceOf(
+      Entity,
+      'Invalid argument "entityObject" when inserting an object in a ' +
+      'MongoAdapter (it has to be an Entity instance)'
+    );
+
+    var EntityClass = entityObject.Entity;
+
+    var promises = [];
+
+    while (EntityClass) {
+      promises.push(_insertObject(EntityClass));
+      EntityClass = EntityClass.General;
+    }
+
+    Promise.all(promises)
+      .then(resolve)
+      .catch(reject);
+
+    function _insertObject(EntityClass) {
+      return mongoAdapter
+        .getDatabase()
+        .then(function (database) {
+          return database
+            .collection(EntityClass.dataName)
+            .insertOne(
+              objectToDocument(
+                entityObject,
+                EntityClass
+              )
+            );
+        })
+        .then(function (result) {
+          expect(result.insertedCount).to.equal(
+            1,
+            'Invalid result.insertedCount return of collection.insertOne ' +
+            'in MongoDB driver when inserting an Object (it should be 1)'
+          );
+        });
+    }
+  });
+}
 
 function deleteObject(entityObject) {
 
@@ -293,4 +393,32 @@ function deleteObject(entityObject) {
     }
 
   });
+}
+
+function objectToDocument(entityObject, EntityClass) {
+  var document = {};
+
+  if (!EntityClass) {
+    EntityClass = entityObject.Entity;
+  }
+
+  var entitySpecificationAttributes = EntityClass.specification.attributes;
+
+  for (var attributeName in entitySpecificationAttributes) {
+    var attribute = entitySpecificationAttributes[attributeName];
+    var attributeDataName = attribute.getDataName(entityObject.adapterName);
+    var attributeDataValue = attribute.getDataValue(
+      entityObject[attributeName]
+    );
+    document[attributeDataName] = attributeDataValue;
+  }
+
+  document.Entity = entityObject.Entity.specification.name;
+
+  document._id = entityObject.id;
+  if (document.hasOwnProperty('id')) {
+    delete document.id;
+  }
+
+  return document;
 }
