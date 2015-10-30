@@ -301,52 +301,35 @@ function insertObject(entityObject) {
 
     var EntityClass = entityObject.Entity;
 
-    var promises = [];
-
-    while (EntityClass) {
-      promises.push(_insertObject(EntityClass));
-      EntityClass = EntityClass.General;
-    }
-
-    Promise.all(promises)
-      .then(resolve)
-      .catch(reject);
-
-    function _insertObject(EntityClass) {
-      return mongoAdapter
-        .getDatabase()
-        .then(function (database) {
-          return database
-            .collection(EntityClass.dataName)
-            .insertOne(
-              objectToDocument(
-                entityObject,
-                EntityClass
-              )
-            );
-        })
-        .then(function (result) {
-          expect(result.insertedCount).to.equal(
-            1,
-            'Invalid result.insertedCount return of collection.insertOne ' +
-            'in MongoDB driver when inserting an Object (it should be 1)'
+    mongoAdapter
+      .getDatabase()
+      .then(function (database) {
+        return database
+          .collection(_getEntityCollectionName(EntityClass))
+          .insertOne(
+            objectToDocument(entityObject)
           );
-        });
-    }
+      })
+      .then(function (result) {
+        expect(result.insertedCount).to.equal(
+          1,
+          'Invalid result.insertedCount return of collection.insertOne ' +
+          'in MongoDB driver when inserting an Object (it should be 1)'
+        );
+
+        resolve();
+      })
+      .catch(reject);
   });
 }
 
-function objectToDocument(entityObject, EntityClass) {
+function objectToDocument(entityObject) {
   var document = {};
 
-  if (!EntityClass) {
-    EntityClass = entityObject.Entity;
-  }
+  var entityAttributes = entityObject.Entity.attributes;
 
-  var entitySpecificationAttributes = EntityClass.specification.attributes;
-
-  for (var attributeName in entitySpecificationAttributes) {
-    var attribute = entitySpecificationAttributes[attributeName];
+  for (var attributeName in entityAttributes) {
+    var attribute = entityAttributes[attributeName];
     var attributeDataName = attribute.getDataName(entityObject.adapterName);
     var attributeDataValue = attribute.getDataValue(
       entityObject[attributeName]
@@ -357,9 +340,18 @@ function objectToDocument(entityObject, EntityClass) {
   document.Entity = entityObject.Entity.specification.name;
 
   document._id = entityObject.id;
-  if (document.hasOwnProperty('id')) {
-    delete document.id;
-  }
+  delete document.id;
 
   return document;
+}
+
+function _getEntityCollectionName(Entity) {
+  while (
+    Entity.General !== null &&
+    !Entity.General.specification.isAbstract
+    ) {
+    Entity = Entity.General;
+  }
+
+  return Entity.dataName;
 }

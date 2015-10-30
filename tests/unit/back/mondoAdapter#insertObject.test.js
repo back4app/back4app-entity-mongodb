@@ -96,32 +96,6 @@ describe('MongoAdapter#insertObject', function () {
       })
       .then(function (database) {
         return database
-          .collection('Entity')
-          .find({_id: entitySpecialization.id}).toArray();
-      })
-      .then(function (documents) {
-        expect(documents).to.be.an.instanceOf(Array);
-        expect(documents).to.have.length(1);
-        expect(documents[0]).to.deep.equal(
-          defaultAdapter.objectToDocument(
-            entitySpecialization,
-            Entity
-          )
-        );
-        return defaultAdapter.getDatabase();
-      })
-      .then(function (database) {
-        return database
-          .collection('Entity')
-          .deleteOne({
-            _id: entitySpecialization.id
-          });
-      })
-      .then(function () {
-        return defaultAdapter.getDatabase();
-      })
-      .then(function (database) {
-        return database
           .collection('EntitySpecialization')
           .find({_id: entitySpecialization.id}).toArray();
       })
@@ -182,32 +156,6 @@ describe('MongoAdapter#insertObject', function () {
 
       defaultAdapter
         .insertObject(myEntity)
-        .then(function () {
-          return defaultAdapter.getDatabase();
-        })
-        .then(function (database) {
-          return database
-            .collection('Entity')
-            .find({_id: myEntity.id}).toArray();
-        })
-        .then(function (documents) {
-          expect(documents).to.be.an.instanceOf(Array);
-          expect(documents).to.have.length(1);
-          expect(documents[0]).to.deep.equal(
-            defaultAdapter.objectToDocument(
-              myEntity,
-              Entity
-            )
-          );
-          return defaultAdapter.getDatabase();
-        })
-        .then(function (database) {
-          return database
-            .collection('Entity')
-            .deleteOne({
-              _id: myEntity.id
-            });
-        })
         .then(function () {
           return defaultAdapter.getDatabase();
         })
@@ -331,11 +279,7 @@ describe('MongoAdapter#insertObject', function () {
               .toArray();
           })
           .then(function (documents) {
-            expect(documents).to.deep.equal([
-              defaultAdapter.objectToDocument(a, Entity),
-              defaultAdapter.objectToDocument(b, Entity),
-              defaultAdapter.objectToDocument(c, Entity)
-            ]);
+            expect(documents).to.deep.equal([]);
 
             finalize();
           });
@@ -351,8 +295,8 @@ describe('MongoAdapter#insertObject', function () {
           .then(function (documents) {
             expect(documents).to.deep.equal([
               defaultAdapter.objectToDocument(a),
-              defaultAdapter.objectToDocument(b, A),
-              defaultAdapter.objectToDocument(c, A)
+              defaultAdapter.objectToDocument(b),
+              defaultAdapter.objectToDocument(c)
             ]);
 
             finalize();
@@ -367,10 +311,7 @@ describe('MongoAdapter#insertObject', function () {
               .toArray();
           })
           .then(function (documents) {
-            expect(documents).to.deep.equal([
-              defaultAdapter.objectToDocument(b),
-              defaultAdapter.objectToDocument(c, B)
-            ]);
+            expect(documents).to.deep.equal([]);
 
             finalize();
           });
@@ -384,9 +325,7 @@ describe('MongoAdapter#insertObject', function () {
               .toArray();
           })
           .then(function (documents) {
-            expect(documents).to.deep.equal([
-              defaultAdapter.objectToDocument(c)
-            ]);
+            expect(documents).to.deep.equal([]);
 
             finalize();
           });
