@@ -60,7 +60,7 @@ describe('MongoAdapter#insertObject', function () {
             _id: entity.id
           });
       })
-      .then(function (documents) {
+      .then(function () {
         return defaultAdapter.getDatabase();
       })
       .then(function (database) {
