@@ -38,10 +38,13 @@ function MongoAdapter(connectionUrl, connectionOptions) {
   var _database = null;
   var _databaseIsLocked = false;
   var _databaseRequestQueue = [];
+  var _collections = [];
 
   this.getDatabase = getDatabase;
   this.openConnection = openConnection;
   this.closeConnection = closeConnection;
+  this.loadEntity = loadEntity;
+  this.loadEntityAttribute = loadEntityAttribute;
 
   expect(arguments).to.have.length.within(
     1,
@@ -193,95 +196,119 @@ function MongoAdapter(connectionUrl, connectionOptions) {
       _databaseRequestQueue.splice(0,1)[0]();
     }
   }
+
+  function loadEntity(Entity) {
+    expect(arguments).to.have.length(
+      1,
+      'Invalid arguments length when loading an entity in a ' +
+      'MongoAdapter (it has to be passed 1 argument)'
+    );
+
+    expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
+      true,
+      'Invalid argument "Entity" when loading an entity in a ' +
+      'MongoAdapter (it has to be an Entity class)'
+    );
+
+    expect(Entity.dataName).to.not.equal(
+      '',
+      'The dataName of an Entity cannot be an empty string in a MongoAdapter'
+    );
+
+    expect(Entity.dataName).to.not.match(
+      /^system\./,
+      'The dataName of an Entity cannot start with "system." in a MongoAdapter'
+    );
+
+    expect(Entity.dataName).to.not.contain(
+      '$',
+      'The dataName of an Entity cannot contain "$" in a MongoAdapter'
+    );
+
+    expect(Entity.dataName).to.not.contain(
+      '\0',
+      'The dataName of an Entity cannot contain "\0" in a MongoAdapter'
+    );
+
+    expect(_collections).to.not.have.ownProperty(
+      Entity.dataName,
+      'Failed to load the Entity called "' + Entity.specification.name +
+      '" because it is not possible to have Entities with duplicated ' +
+      'dataName in a MongoAdapter'
+    );
+
+    _collections[Entity.dataName] = [];
+  }
+
+  function loadEntityAttribute(Entity, attribute) {
+    expect(arguments).to.have.length(
+      2,
+      'Invalid arguments length when loading an entity attribute in a ' +
+      'MongoAdapter (it has to be passed 2 arguments)'
+    );
+
+    expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
+      true,
+      'Invalid argument "Entity" when loading an entity attribute in a ' +
+      'MongoAdapter (it has to be an Entity class)'
+    );
+
+    expect(attribute).to.be.an.instanceOf(
+      Attribute,
+      'Invalid argument "attribute" when loading an entity attribute in a ' +
+      'MongoAdapter (it has to be an Attribute instance)'
+    );
+
+    var dataName = attribute.getDataName(Entity.adapterName);
+
+    expect(dataName).to.not.match(
+      /^\$/,
+      'The dataName of an Attribute cannot start with "$" in a MongoAdapter'
+    );
+
+    expect(dataName).to.not.contain(
+      '.',
+      'The dataName of an Attribute cannot contain "." in a MongoAdapter'
+    );
+
+    expect(dataName).to.not.contain(
+      '\0',
+      'The dataName of an Attribute cannot contain "\0" in a MongoAdapter'
+    );
+
+    expect(dataName).to.not.equal(
+      'Entity',
+      'The dataName of an Attribute cannot be equal to "Entity" in a ' +
+      'MongoAdapter'
+    );
+
+    expect(dataName).to.not.equal(
+      '_id',
+      'The dataName of an Attribute cannot be equal to "_id" in a MongoAdapter'
+    );
+
+    expect(_collections).to.have.ownProperty(
+      Entity.dataName,
+      'Failed to load the attribute in an Entity called "' +
+      Entity.specification.name + '" because the Entity was not loaded yet'
+    );
+
+    expect(_collections[Entity.dataName]).to.not.contain(
+      dataName,
+      'Failed to load the attribute "' + attribute.name + '" in an Entity ' +
+      'called "' + Entity.specification.name + '" because it is not ' +
+      'possible to have attributes of the same Entity with duplicated ' +
+      'dataName in a MongoAdapter'
+    );
+
+    _collections[Entity.dataName].push(dataName);
+  }
 }
 
 classes.generalize(Adapter, MongoAdapter);
 
-MongoAdapter.prototype.loadEntity = loadEntity;
-MongoAdapter.prototype.loadEntityAttribute = loadEntityAttribute;
 MongoAdapter.prototype.insertObject = insertObject;
 MongoAdapter.prototype.objectToDocument = objectToDocument;
-
-function loadEntity(Entity) {
-  expect(arguments).to.have.length(
-    1,
-    'Invalid arguments length when loading an entity in a ' +
-    'MongoAdapter (it has to be passed 1 argument)'
-  );
-
-  expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
-    true,
-    'Invalid argument "Entity" when loading an entity in a ' +
-    'MongoAdapter (it has to be an Entity class)'
-  );
-
-  expect(Entity.dataName).to.not.equal(
-    '',
-    'The dataName of an Entity cannot be an empty string in a MongoAdapter'
-  );
-
-  expect(Entity.dataName).to.not.match(
-    /^system\./,
-    'The dataName of an Entity cannot start with "system." in a MongoAdapter'
-  );
-
-  expect(Entity.dataName).to.not.contain(
-    '$',
-    'The dataName of an Entity cannot contain "$" in a MongoAdapter'
-  );
-
-  expect(Entity.dataName).to.not.contain(
-    '\0',
-    'The dataName of an Entity cannot contain "\0" in a MongoAdapter'
-  );
-}
-
-function loadEntityAttribute(Entity, attribute) {
-  expect(arguments).to.have.length(
-    2,
-    'Invalid arguments length when loading an entity attribute in a ' +
-    'MongoAdapter (it has to be passed 2 arguments)'
-  );
-
-  expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
-    true,
-    'Invalid argument "Entity" when loading an entity attribute in a ' +
-    'MongoAdapter (it has to be an Entity class)'
-  );
-
-  expect(attribute).to.be.an.instanceOf(
-    Attribute,
-    'Invalid argument "attribute" when loading an entity attribute in a ' +
-    'MongoAdapter (it has to be an Attribute instance)'
-  );
-
-  var dataName = attribute.getDataName(Entity.adapterName);
-
-  expect(dataName).to.not.match(
-    /^\$/,
-    'The dataName of an Attribute cannot start with "$" in a MongoAdapter'
-  );
-
-  expect(dataName).to.not.contain(
-    '.',
-    'The dataName of an Attribute cannot contain "." in a MongoAdapter'
-  );
-
-  expect(dataName).to.not.contain(
-    '\0',
-    'The dataName of an Attribute cannot contain "\0" in a MongoAdapter'
-  );
-
-  expect(dataName).to.not.equal(
-    'Entity',
-    'The dataName of an Attribute cannot be equal to "Entity" in a MongoAdapter'
-  );
-
-  expect(dataName).to.not.equal(
-    '_id',
-    'The dataName of an Attribute cannot be equal to "_id" in a MongoAdapter'
-  );
-}
 
 function insertObject(entityObject) {
   var mongoAdapter = this;
