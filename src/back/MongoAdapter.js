@@ -101,7 +101,7 @@ function MongoAdapter(connectionUrl, connectionOptions) {
    * @example
    * mongoAdapter.openConnection()
    *   .then(function () {
- *     console.log('success');
+ *     console.log('connection opened');
  *   })
    *   .catch(function (error) {
  *     console.log(error);
@@ -149,8 +149,8 @@ function MongoAdapter(connectionUrl, connectionOptions) {
    * succeed and the Error if failed.
    * @example
    * mongoAdapter.closeConnection()
-   *   .then(function (result) {
-   *     console.log(result);
+   *   .then(function () {
+   *     console.log('connection closed');
    *   })
    *   .catch(function (error) {
    *     console.log(error);
@@ -309,6 +309,7 @@ classes.generalize(Adapter, MongoAdapter);
 
 MongoAdapter.prototype.insertObject = insertObject;
 MongoAdapter.prototype.objectToDocument = objectToDocument;
+MongoAdapter.prototype.getEntityCollectionName = getEntityCollectionName;
 
 function insertObject(entityObject) {
   var mongoAdapter = this;
@@ -332,7 +333,7 @@ function insertObject(entityObject) {
       .getDatabase()
       .then(function (database) {
         return database
-          .collection(_getEntityCollectionName(EntityClass))
+          .collection(getEntityCollectionName(EntityClass))
           .insertOne(
             objectToDocument(entityObject)
           );
@@ -372,7 +373,7 @@ function objectToDocument(entityObject) {
   return document;
 }
 
-function _getEntityCollectionName(Entity) {
+function getEntityCollectionName(Entity) {
   while (
     Entity.General !== null &&
     !Entity.General.specification.isAbstract
