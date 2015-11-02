@@ -69,6 +69,21 @@ function MongoAdapter(connectionUrl, connectionOptions) {
     connectionOptions = null;
   }
 
+  /**
+   * Gets the MongoClient Db object to be use to perform the operations.
+   * @name module:back4app-entity-mongodb.MongoAdapter#getDatabase
+   * @function
+   * @returns {Promise.<Db|Error>} Promise that returns the MongoClient Db
+   * object if succeed and the Error if failed.
+   * @example
+   * mongoAdapter.getDatabase()
+   *   .then(function (database) {
+   *     database.createCollection('myCollection');
+   *   })
+   *   .catch(function (error) {
+   *     console.log(error);
+   *   });
+   */
   function getDatabase() {
     var mongoAdapter = this;
 
@@ -101,11 +116,11 @@ function MongoAdapter(connectionUrl, connectionOptions) {
    * @example
    * mongoAdapter.openConnection()
    *   .then(function () {
- *     console.log('connection opened');
- *   })
+   *     console.log('connection opened');
+   *   })
    *   .catch(function (error) {
- *     console.log(error);
- *   });
+   *     console.log(error);
+   *   });
    */
   function openConnection() {
     expect(arguments).to.have.length(
