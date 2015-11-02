@@ -38,7 +38,7 @@ function MongoAdapter(connectionUrl, connectionOptions) {
   var _database = null;
   var _databaseIsLocked = false;
   var _databaseRequestQueue = [];
-  var _collections = [];
+  var _collections = {};
 
   this.getDatabase = getDatabase;
   this.openConnection = openConnection;
@@ -206,6 +206,15 @@ function MongoAdapter(connectionUrl, connectionOptions) {
     });
   }
 
+  /**
+   * Processes the database request queue.
+   * @private
+   * @name
+   * module:back4app-entity-mongodb.MongoAdapter#_processDatabaseRequestQueue
+   * @function
+   * @example
+   * _processDatabaseRequestQueue();
+   */
   function _processDatabaseRequestQueue() {
     while (_databaseRequestQueue.length > 0) {
       _databaseRequestQueue.splice(0,1)[0]();
@@ -217,6 +226,12 @@ function MongoAdapter(connectionUrl, connectionOptions) {
       1,
       'Invalid arguments length when loading an entity in a ' +
       'MongoAdapter (it has to be passed 1 argument)'
+    );
+
+    expect(Entity).to.be.a(
+      'function',
+      'Invalid argument "Entity" when loading an entity in a ' +
+      'MongoAdapter (it has to be an Entity class)'
     );
 
     expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(

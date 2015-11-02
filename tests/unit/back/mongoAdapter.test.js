@@ -16,6 +16,7 @@ var entity = require('@back4app/back4app-entity');
 var settings = entity.settings;
 var classes = entity.utils.classes;
 var Adapter = entity.adapters.Adapter;
+var Entity = entity.models.Entity;
 var MongoAdapter = require('../../../').MongoAdapter;
 
 require('../settings');
@@ -389,6 +390,70 @@ describe('MongoAdapter', function () {
             }
           });
       }
+    });
+  });
+
+  describe('#loadEntity', function () {
+    it('expect to not work with wrong arguments', function () {
+      expect(function () {
+        mongoAdapter.loadEntity();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity(null);
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity({});
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity(function () {});
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity(Entity.specify('MyEntity10'), null);
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity(Entity.specify({
+          name: 'MyEntity11',
+          dataName: 'system.dataName'
+        }));
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity(Entity.specify({
+          name: 'MyEntity11',
+          dataName: 'dataName$dataName'
+        }));
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity(Entity.specify({
+          name: 'MyEntity11',
+          dataName: 'dataName\0ataName'
+        }));
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity(Entity.specify({
+          name: 'MyEntity12',
+          dataName: 'MyEntity12'
+        }));
+
+        mongoAdapter.loadEntity(Entity.specify({
+          name: 'MyEntity13',
+          dataName: 'MyEntity12'
+        }));
+      }).to.throw(AssertionError);
+    });
+
+    it('expect to work with right arguments', function () {
+      mongoAdapter.loadEntity(Entity.specify({
+        name: 'MyEntity14',
+        dataName: 'MyEntity14'
+      }));
     });
   });
 });
