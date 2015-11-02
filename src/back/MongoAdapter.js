@@ -7,7 +7,8 @@ var MongoClient = mongodb.MongoClient;
 var entity = require('@back4app/back4app-entity');
 var classes = entity.utils.classes;
 var Adapter = entity.adapters.Adapter;
-var Entity = entity.models.Entity;
+var models = entity.models;
+var Entity = models.Entity;
 var attributes = entity.models.attributes;
 var Attribute = attributes.Attribute;
 
@@ -431,7 +432,35 @@ function objectToDocument(entityObject) {
   return document;
 }
 
+/**
+ * Gets the collection name in which the objects of a given Entity shall be
+ * saved.
+ * @name module:back4app-entity-mongodb.MongoAdapter#getEntityCollectionName
+ * @function
+ * @param {!Class} Entity The Entity class whose collection name will be get.
+ * @returns {string} The collection name.
+ * @example
+ * var entityCollectionName = mongoAdapter.getEntityCollectionName(MyEntity);
+ */
 function getEntityCollectionName(Entity) {
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when getting the collection name of an Entity ' +
+    'class (it has to be passed 1 argument)'
+  );
+
+  expect(Entity).to.be.a(
+    'function',
+    'Invalid argument "Entity" when getting the collection name of an ' +
+    'Entity (it has to be an Entity class)'
+  );
+
+  expect(classes.isGeneral(models.Entity, Entity)).to.equal(
+    true,
+    'Invalid argument "Entity" when getting the collection name of an ' +
+    'Entity (it has to be an Entity class)'
+  );
+
   while (
     Entity.General !== null &&
     !Entity.General.specification.isAbstract

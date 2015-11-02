@@ -680,4 +680,67 @@ describe('MongoAdapter', function () {
       });
     });
   });
+
+  describe('#getEntityCollectionName', function () {
+    it('expect to not work with wrong arguments', function () {
+      expect(function () {
+        mongoAdapter.getEntityCollectionName();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.getEntityCollectionName(null);
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.getEntityCollectionName({});
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.getEntityCollectionName(function () {});
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.getEntityCollectionName(Entity, null);
+      }).to.throw(AssertionError);
+    });
+
+    it('expect to get correct names', function () {
+      expect(mongoAdapter.getEntityCollectionName(Entity)).to.equal('Entity');
+
+      expect(mongoAdapter.getEntityCollectionName(
+        Entity.specify({
+          name: 'MyAbstract1',
+          isAbstract: true
+        })
+      )).to.equal('MyAbstract1');
+
+      expect(mongoAdapter.getEntityCollectionName(
+        Entity.getSpecialization('MyAbstract1').specify({
+          name: 'MyConcrete1',
+          isAbstract: false
+        })
+      )).to.equal('MyConcrete1');
+
+      expect(mongoAdapter.getEntityCollectionName(
+        Entity.getSpecialization('MyConcrete1').specify({
+          name: 'MyConcrete2',
+          isAbstract: false
+        })
+      )).to.equal('MyConcrete1');
+
+      expect(mongoAdapter.getEntityCollectionName(
+        Entity.getSpecialization('MyConcrete2').specify({
+          name: 'MyConcrete3',
+          isAbstract: false
+        })
+      )).to.equal('MyConcrete1');
+
+      expect(mongoAdapter.getEntityCollectionName(
+        Entity.specify({
+          name: 'MyConcrete4',
+          isAbstract: false
+        })
+      )).to.equal('MyConcrete4');
+    });
+  });
 });
