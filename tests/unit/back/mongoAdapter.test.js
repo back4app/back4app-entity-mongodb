@@ -16,7 +16,9 @@ var entity = require('@back4app/back4app-entity');
 var settings = entity.settings;
 var classes = entity.utils.classes;
 var Adapter = entity.adapters.Adapter;
-var Entity = entity.models.Entity;
+var models = entity.models;
+var Entity = models.Entity;
+var ObjectAttribute = models.attributes.types.ObjectAttribute;
 var MongoAdapter = require('../../../').MongoAdapter;
 
 require('../settings');
@@ -454,6 +456,153 @@ describe('MongoAdapter', function () {
         name: 'MyEntity14',
         dataName: 'MyEntity14'
       }));
+    });
+  });
+
+  describe('#loadEntityAttribute', function () {
+    it('expect to not work with wrong arguments', function () {
+      expect(function () {
+        mongoAdapter.loadEntityAttribute();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(null);
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(null, null);
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(Entity.specify('Entity15'), null);
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute({}, {});
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(Entity.specify('Entity16'), {});
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(function () {}, function () {});
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.specify('Entity17'),
+          function () {}
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.specify('Entity18'),
+          new ObjectAttribute('objectAttribute'),
+          null
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntity(Entity.specify('Entity14'));
+
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity14'),
+          new ObjectAttribute({
+            name: 'objectAttribute',
+            dataName: '$dataName'
+          })
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity14'),
+          new ObjectAttribute({
+            name: 'objectAttribute',
+            dataName: 'dataName.dataName'
+          })
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity14'),
+          new ObjectAttribute({
+            name: 'objectAttribute',
+            dataName: 'dataName\0dataName'
+          })
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity14'),
+          new ObjectAttribute({
+            name: 'objectAttribute',
+            dataName: 'Entity'
+          })
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity14'),
+          new ObjectAttribute({
+            name: 'objectAttribute',
+            dataName: '_id'
+          })
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity15'),
+          new ObjectAttribute({
+            name: 'objectAttribute',
+            dataName: 'dataName'
+          })
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity14'),
+          new ObjectAttribute({
+            name: 'objectAttribute',
+            dataName: 'dataName'
+          })
+        );
+
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity14'),
+          new ObjectAttribute({
+            name: 'objectAttribute',
+            dataName: 'dataName'
+          })
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.loadEntityAttribute(
+          Entity.getSpecialization('Entity14'),
+          new ObjectAttribute({
+            name: 'objectAttribute2',
+            dataName: 'dataName'
+          })
+        );
+      }).to.throw(AssertionError);
+    });
+
+    it('expect to work with right arguments', function () {
+      mongoAdapter.loadEntityAttribute(
+        Entity.getSpecialization('Entity14'),
+        new ObjectAttribute({
+          name: 'objectAttribute3',
+          dataName: 'dataName3'
+        })
+      );
     });
   });
 });

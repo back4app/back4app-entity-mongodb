@@ -277,6 +277,12 @@ function MongoAdapter(connectionUrl, connectionOptions) {
       'MongoAdapter (it has to be passed 2 arguments)'
     );
 
+    expect(Entity).to.be.a(
+      'function',
+      'Invalid argument "Entity" when loading an entity in a ' +
+      'MongoAdapter (it has to be an Entity class)'
+    );
+
     expect(classes.isGeneral(entity.models.Entity, Entity)).to.be.equal(
       true,
       'Invalid argument "Entity" when loading an entity attribute in a ' +
