@@ -104,8 +104,7 @@ describe('MongoAdapter#insertObject', function () {
         expect(documents).to.have.length(1);
         expect(documents[0]).to.deep.equal(
           defaultAdapter.objectToDocument(
-            entitySpecialization,
-            EntitySpecialization
+            entitySpecialization
           )
         );
         return defaultAdapter.getDatabase();
@@ -169,8 +168,7 @@ describe('MongoAdapter#insertObject', function () {
           expect(documents).to.have.length(1);
           expect(documents[0]).to.deep.equal(
             defaultAdapter.objectToDocument(
-              myEntity,
-              MyEntity2
+              myEntity
             )
           );
           return defaultAdapter.getDatabase();

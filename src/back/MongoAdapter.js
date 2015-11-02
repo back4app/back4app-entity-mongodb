@@ -387,7 +387,29 @@ function insertObject(entityObject) {
   });
 }
 
+/**
+ * Converts an Entity object in a MongoDB document.
+ * @name module:back4app-entity-mongodb.MongoAdapter#objectToDocument
+ * @function
+ * @param {!module:back4app-entity/models.Entity} entityObject The Entity object
+ * to be converted to a MongoDB document.
+ * @returns {Object.<string, *>} The MongoDB document that is a dictionary.
+ * @example
+ * var myDocument = mongoAdapter.objectToDocument(myObject);
+ */
 function objectToDocument(entityObject) {
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when converting an entity object in a ' +
+    'MongoDB document (it has to be passed 1 argument)'
+  );
+
+  expect(entityObject).to.be.an.instanceOf(
+    Entity,
+    'Invalid argument "entityObject" when converting an entity object in a ' +
+    'MongoDB document (it has to be an Entity instances)'
+  );
+
   var document = {};
 
   var entityAttributes = entityObject.Entity.attributes;

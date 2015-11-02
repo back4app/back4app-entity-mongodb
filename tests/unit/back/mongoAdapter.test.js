@@ -605,4 +605,79 @@ describe('MongoAdapter', function () {
       );
     });
   });
+
+  describe('#objectToDocument', function () {
+    it('expect to not work with wrong arguments', function () {
+      expect(function () {
+        mongoAdapter.objectToDocument();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.objectToDocument(null);
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.objectToDocument({});
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.objectToDocument(new (Entity.specify('Entity20'))(), null);
+      }).to.throw(AssertionError);
+    });
+
+    it('expect to convert correctly', function () {
+      var MyEntity30 = Entity.specify({
+        name: 'MyEntity30',
+        attributes: {
+          a1: {},
+          a2: {
+            type: 'MyEntity30'
+          },
+          a3: {
+            dataName: 'a3DataName'
+          },
+          a4: {
+            dataName: {
+              default: 'a4DataName'
+            }
+          },
+          a5: {
+            dataName: {
+              default2: 'a5DataName'
+            }
+          },
+          a6: {
+            type: 'MyEntity30'
+          },
+          a7: {}
+        }
+      });
+
+      var myObject = {
+        myObjectAttributeName: 'myObjectAttributeValue'
+      };
+
+      var myEntity301 = new MyEntity30();
+
+      var myEntity302 = new MyEntity30({
+        a1: myObject,
+        a6: myEntity301
+      });
+
+      expect(mongoAdapter.objectToDocument(myEntity302)).to.deep.equal({
+        Entity: 'MyEntity30',
+        _id: myEntity302.id,
+        a1: myObject,
+        a2: null,
+        a3DataName: null,
+        a4DataName: null,
+        a5: null,
+        a6: {
+          Entity: 'MyEntity30',
+          id: myEntity301.id
+        },
+        a7: null
+      });
+    });
+  });
 });
