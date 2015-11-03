@@ -548,11 +548,7 @@ function _buildCursor(db, EntityClass, query) {
   }
 
   // find collection name
-  var GeneralClass = EntityClass;
-  while (GeneralClass.General !== Entity) {
-    GeneralClass = GeneralClass.General;
-  }
-  var name = GeneralClass.specification.name;
+  var name = getEntityCollectionName(EntityClass);
 
   // build cursor
   return db.collection(name).find(query);

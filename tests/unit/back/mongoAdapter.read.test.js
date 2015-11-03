@@ -59,6 +59,14 @@ describe('MongoAdapter', function () {
     }
   });
 
+  var $User = Entity.specify({
+    name: '$User',
+    dataName: 'User',
+    attributes: {
+      login: {type: 'String'}
+    }
+  });
+
   // testing vars
   var mongoAdapter;
   var db;
@@ -302,6 +310,45 @@ describe('MongoAdapter', function () {
           .and.instanceOf(Author);
       });
     });
+
+    describe('objects with dataName', function () {
+      // back4app entity instances
+      // (ignore some lint rules on purpose, in order to be able to test)
+      /* jshint newcap:false, unused:false */
+      var user1 = new $User({id: 'f5b30df9-51f9-430e-9159-b058fe414dae',
+        login: 'user1'});
+      /* jshint newcap:false, unused:false */
+      var user2 = new $User({id: '77cd4229-f376-4bd7-97df-62c35ee5ae51',
+        login: 'user2'});
+      /* jshint newcap:false, unused:false */
+      var user3 = new $User({id: 'f4a369fd-36eb-40a2-9540-903c10b06f7e',
+        login: 'user3'});
+
+      beforeEach(function () {
+        // populate test database
+        return db.collection('User').insertMany([
+          {Entity: '$User', _id: 'f5b30df9-51f9-430e-9159-b058fe414dae',
+            login: 'user1'},
+          {Entity: '$User', _id: '77cd4229-f376-4bd7-97df-62c35ee5ae51',
+            login: 'user2'},
+          {Entity: '$User', _id: 'f4a369fd-36eb-40a2-9540-903c10b06f7e',
+            login: 'user3'}
+        ]);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should get object by id', function () {
+        return expect(mongoAdapter.getObject($User, {
+          id: 'f5b30df9-51f9-430e-9159-b058fe414dae'
+        }))
+          .to.become(user1)
+          .and.instanceOf($User);
+      });
+    });
   });
 
   describe('#findObjects()', function () {
@@ -516,6 +563,50 @@ describe('MongoAdapter', function () {
         }))
           .to.become([john])
           .and.collectionOf(Author);
+      });
+    });
+
+    describe('objects with dataName', function () {
+      // back4app entity instances
+      // (ignore some lint rules on purpose, in order to be able to test)
+      /* jshint newcap:false, unused:false */
+      var user1 = new $User({id: 'f5b30df9-51f9-430e-9159-b058fe414dae',
+        login: 'user1'});
+      /* jshint newcap:false, unused:false */
+      var user2 = new $User({id: '77cd4229-f376-4bd7-97df-62c35ee5ae51',
+        login: 'user2'});
+      /* jshint newcap:false, unused:false */
+      var user3 = new $User({id: 'f4a369fd-36eb-40a2-9540-903c10b06f7e',
+        login: 'user3'});
+
+      beforeEach(function () {
+        // populate test database
+        return db.collection('User').insertMany([
+          {Entity: '$User', _id: 'f5b30df9-51f9-430e-9159-b058fe414dae',
+            login: 'user1'},
+          {Entity: '$User', _id: '77cd4229-f376-4bd7-97df-62c35ee5ae51',
+            login: 'user2'},
+          {Entity: '$User', _id: 'f4a369fd-36eb-40a2-9540-903c10b06f7e',
+            login: 'user3'}
+        ]);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should find objects by id', function () {
+        return expect(mongoAdapter.findObjects($User, {
+          id: {
+            $in: [
+              '77cd4229-f376-4bd7-97df-62c35ee5ae51',
+              'f4a369fd-36eb-40a2-9540-903c10b06f7e'
+            ]
+          }
+        }))
+          .to.become([user2, user3])
+          .and.collectionOf($User);
       });
     });
   });
