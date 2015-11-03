@@ -9,7 +9,6 @@ var classes = entity.utils.classes;
 var objects = entity.utils.objects;
 var Adapter = entity.adapters.Adapter;
 var Entity = entity.models.Entity;
-var AssociationAttribute = entity.models.attributes.types.AssociationAttribute;
 
 var QueryError = require('./errors').QueryError;
 
@@ -352,7 +351,9 @@ MongoAdapter.prototype.insertObject = insertObject;
 MongoAdapter.prototype.getObject = getObject;
 MongoAdapter.prototype.findObjects = findObjects;
 MongoAdapter.prototype.deleteObject = deleteObject;
+
 MongoAdapter.prototype.objectToDocument = objectToDocument;
+MongoAdapter.prototype.documentToObject = documentToObject;
 MongoAdapter.prototype.getEntityCollectionName = getEntityCollectionName;
 
 function insertObject(entityObject) {
@@ -488,7 +489,7 @@ function getObject(EntityClass, query) {
 
   function populateEntity() {
     // return populated entity
-    return _documentToObject(document);
+    return documentToObject(document, EntityClass.adapterName);
   }
 
   return this.getDatabase()
@@ -527,7 +528,7 @@ function findObjects(EntityClass, query) {
   function populateEntities(docs) {
     var entities = [];
     for (var i = 0; i < docs.length; i++) {
-      entities.push(_documentToObject(docs[i]));
+      entities.push(documentToObject(docs[i], EntityClass.adapterName));
     }
     return entities;
   }
@@ -554,37 +555,39 @@ function _buildCursor(db, EntityClass, query) {
   return db.collection(name).find(query);
 }
 
-function _documentToObject(document) {
-  var obj = objects.copy(document);
+/**
+ * Converts a MongoDB document to an Entity object.
+ * @name module:back4app-entity-mongodb.MongoAdapter#documentToObject
+ * @function
+ * @param {Object.<string, *>} document The MongoDB document.
+ * @param {String} adapterName The name of the entity adapter.
+ * @returns {!module:back4app-entity/models.Entity} The converted Entity object.
+ * @example
+ * <pre>
+ *   var myEntity = mongoAdapter.documentToObject(myDocument, 'mongo');
+ * </pre>
+ */
+function documentToObject(document, adapterName) {
+  var obj = {};
 
   // replace `_id` with `id`
-  if (obj.hasOwnProperty('_id')) {
-    obj.id = obj._id;
-    delete obj._id;
+  if (document.hasOwnProperty('_id')) {
+    obj.id = document._id;
   }
 
-  // get document class and remove `Entity`
-  var EntityClass = Entity.getSpecialization(obj.Entity);
-  delete obj.Entity;
+  // get document class
+  var EntityClass = Entity.getSpecialization(document.Entity);
 
-  // loop through entity's attributes and replace associations with instances
-  var attributes = EntityClass.specification.attributes;
+  // loop through entity's attributes and replace with parsed values
+  var attributes = EntityClass.attributes;
   for (var attrName in attributes) {
-    if (attributes.hasOwnProperty(attrName) && obj.hasOwnProperty(attrName)) {
-      // check for association
+    if (attributes.hasOwnProperty(attrName)) {
+      // get attribute name in database
       var attr = attributes[attrName];
-      if (attr instanceof AssociationAttribute) {
-        var multiplicity = attr.multiplicity;
-        if (multiplicity === '1' || multiplicity === '0..1') {
-          // single related object
-          obj[attrName] = _documentToObject(obj[attrName]);
-        } else {
-          // array of related objects
-          var items = obj[attrName];
-          for (var i = 0; i < items.length; i++) {
-            items[i] = _documentToObject(items[i]);
-          }
-        }
+      var dataName = attr.getDataName(adapterName);
+      // check if name is present on document and replace with parsed value
+      if (document.hasOwnProperty(dataName)) {
+        obj[attrName] = attr.parseDataValue(document[dataName]);
       }
     }
   }
