@@ -5,12 +5,14 @@ var Promise = require('bluebird');
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var entity = require('@back4app/back4app-entity');
-var classes = entity.utils.classes;
-var Adapter = entity.adapters.Adapter;
 var models = entity.models;
 var Entity = models.Entity;
-var attributes = entity.models.attributes;
-var Attribute = attributes.Attribute;
+var Attribute = models.attributes.Attribute;
+var classes = entity.utils.classes;
+var objects = entity.utils.objects;
+var Adapter = entity.adapters.Adapter;
+
+var QueryError = require('./errors').QueryError;
 
 module.exports = MongoAdapter;
 
@@ -346,9 +348,13 @@ classes.generalize(Adapter, MongoAdapter);
 
 MongoAdapter.prototype.insertObject = insertObject;
 MongoAdapter.prototype.updateObject = updateObject;
-MongoAdapter.prototype.objectToDocument = objectToDocument;
-MongoAdapter.prototype.getEntityCollectionName = getEntityCollectionName;
+MongoAdapter.prototype.getObject = getObject;
+MongoAdapter.prototype.findObjects = findObjects;
 MongoAdapter.prototype.deleteObject = deleteObject;
+
+MongoAdapter.prototype.objectToDocument = objectToDocument;
+MongoAdapter.prototype.documentToObject = documentToObject;
+MongoAdapter.prototype.getEntityCollectionName = getEntityCollectionName;
 
 function insertObject(entityObject) {
   var mongoAdapter = this;
@@ -491,41 +497,158 @@ function objectToDocument(entityObject, onlyDirty) {
 }
 
 /**
- * Gets the collection name in which the objects of a given Entity shall be
- * saved.
- * @name module:back4app-entity-mongodb.MongoAdapter#getEntityCollectionName
+ * Get object from the database matching given query.
+ * @name module:back4app-entity-mongodb.MongoAdapter#getObject
  * @function
- * @param {!Class} Entity The Entity class whose collection name will be get.
- * @returns {string} The collection name.
+ * @returns {Promise.<object|Error>} Promise that returns found object if
+ * succeed or Error if failed.
  * @example
- * var entityCollectionName = mongoAdapter.getEntityCollectionName(MyEntity);
+ * mongoAdapter.getObject(Car, {color: 'red'})
+ *   .then(function(car) {
+ *     console.log(car);
+ *   });
  */
-function getEntityCollectionName(Entity) {
+function getObject(EntityClass, query) {
   expect(arguments).to.have.length(
-    1,
-    'Invalid arguments length when getting the collection name of an Entity ' +
-    'class (it has to be passed 1 argument)'
+    2,
+    'Invalid arguments length when inserting an object in a MongoAdapter ' +
+    '(it has to be passed 2 arguments)'
   );
 
-  expect(Entity).to.be.a(
-    'function',
-    'Invalid argument "Entity" when getting the collection name of an ' +
-    'Entity (it has to be an Entity class)'
-  );
+  var cursor;
+  var document;
 
-  expect(classes.isGeneral(models.Entity, Entity)).to.equal(
-    true,
-    'Invalid argument "Entity" when getting the collection name of an ' +
-    'Entity (it has to be an Entity class)'
-  );
-
-  while (
-  Entity.General !== null && !Entity.General.specification.isAbstract
-    ) {
-    Entity = Entity.General;
+  function findDocument(db) {
+    cursor = _buildCursor(db, EntityClass, query);
+    return cursor.next();
   }
 
-  return Entity.dataName;
+  function checkNotEmpty(doc) {
+    // save document
+    document = doc;
+
+    // check for no result
+    if (doc === null) {
+      throw new QueryError('Object does not exist');
+    }
+  }
+
+  function checkNotMultiple() {
+    // check for multiple results
+    return cursor.hasNext()
+      .then(function (hasNext) {
+        if (hasNext) {
+          throw new QueryError('Query matches multiple objects');
+        }
+      });
+  }
+
+  function populateEntity() {
+    // return populated entity
+    return documentToObject(document, EntityClass.adapterName);
+  }
+
+  return this.getDatabase()
+    .then(findDocument)
+    .then(checkNotEmpty)
+    .then(checkNotMultiple)
+    .then(populateEntity);
+}
+
+/**
+ * Find objects in the database matching given query.
+ * @name module:back4app-entity-mongodb.MongoAdapter#findObjects
+ * @function
+ * @returns {Promise.<object|Error>} Promise that returns found objects if
+ * succeed or Error if failed.
+ * @example
+ * mongoAdapter.findObjects(Car, {year: 1990})
+ *   .then(function(cars) {
+ *     for (var i = 0; i < cars.length; i++) {
+ *       var car = cars[i];
+ *       console.log(car);
+ *     }
+ *   });
+ */
+function findObjects(EntityClass, query) {
+  expect(arguments).to.have.length(
+    2,
+    'Invalid arguments length when inserting an object in a MongoAdapter ' +
+    '(it has to be passed 2 arguments)'
+  );
+
+  function findDocuments(db) {
+    return _buildCursor(db, EntityClass, query).toArray();
+  }
+
+  function populateEntities(docs) {
+    var entities = [];
+    for (var i = 0; i < docs.length; i++) {
+      entities.push(documentToObject(docs[i], EntityClass.adapterName));
+    }
+    return entities;
+  }
+
+  return this.getDatabase()
+    .then(findDocuments)
+    .then(populateEntities);
+}
+
+function _buildCursor(db, EntityClass, query) {
+  // copy query to not mess with user's object
+  query = objects.copy(query);
+
+  // rename id field
+  if (query.hasOwnProperty('id')) {
+    query._id = query.id;
+    delete query.id;
+  }
+
+  // find collection name
+  var name = getEntityCollectionName(EntityClass);
+
+  // build cursor
+  return db.collection(name).find(query);
+}
+
+/**
+ * Converts a MongoDB document to an Entity object.
+ * @name module:back4app-entity-mongodb.MongoAdapter#documentToObject
+ * @function
+ * @param {Object.<string, *>} document The MongoDB document.
+ * @param {String} adapterName The name of the entity adapter.
+ * @returns {!module:back4app-entity/models.Entity} The converted Entity object.
+ * @example
+ * <pre>
+ *   var myEntity = mongoAdapter.documentToObject(myDocument, 'mongo');
+ * </pre>
+ */
+function documentToObject(document, adapterName) {
+  var obj = {};
+
+  // replace `_id` with `id`
+  if (document.hasOwnProperty('_id')) {
+    obj.id = document._id;
+  }
+
+  // get document class
+  var EntityClass = Entity.getSpecialization(document.Entity);
+
+  // loop through entity's attributes and replace with parsed values
+  var attributes = EntityClass.attributes;
+  for (var attrName in attributes) {
+    if (attributes.hasOwnProperty(attrName)) {
+      // get attribute name in database
+      var attr = attributes[attrName];
+      var dataName = attr.getDataName(adapterName);
+      // check if name is present on document and replace with parsed value
+      if (document.hasOwnProperty(dataName)) {
+        obj[attrName] = attr.parseDataValue(document[dataName]);
+      }
+    }
+  }
+
+  return new EntityClass(obj);
 }
 
 function deleteObject(entityObject) {
@@ -584,4 +707,43 @@ function deleteObject(entityObject) {
     }
 
   });
+}
+
+/**
+ * Gets the collection name in which the objects of a given Entity shall be
+ * saved.
+ * @name module:back4app-entity-mongodb.MongoAdapter#getEntityCollectionName
+ * @function
+ * @param {!Class} Entity The Entity class whose collection name will be get.
+ * @returns {string} The collection name.
+ * @example
+ * var entityCollectionName = mongoAdapter.getEntityCollectionName(MyEntity);
+ */
+function getEntityCollectionName(Entity) {
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when getting the collection name of an Entity ' +
+    'class (it has to be passed 1 argument)'
+  );
+
+  expect(Entity).to.be.a(
+    'function',
+    'Invalid argument "Entity" when getting the collection name of an ' +
+    'Entity (it has to be an Entity class)'
+  );
+
+  expect(classes.isGeneral(models.Entity, Entity)).to.equal(
+    true,
+    'Invalid argument "Entity" when getting the collection name of an ' +
+    'Entity (it has to be an Entity class)'
+  );
+
+  while (
+    Entity.General !== null &&
+    !Entity.General.specification.isAbstract
+    ) {
+    Entity = Entity.General;
+  }
+
+  return Entity.dataName;
 }

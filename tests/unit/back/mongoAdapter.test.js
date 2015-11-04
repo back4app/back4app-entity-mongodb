@@ -90,7 +90,7 @@ describe('MongoAdapter', function () {
     it('expect to reject with wrong connection', function (done) {
       this.timeout(2000);
       mongoAdapter = new MongoAdapter(
-        'mongodb://127.0.0.1:6969?connectTimeoutMS=1000'
+        'mongodb://127.0.0.1:6969/?connectTimeoutMS=1000'
       );
       var promise = mongoAdapter.openConnection();
       expect(promise).to.be.an.instanceOf(Promise);
@@ -241,7 +241,7 @@ describe('MongoAdapter', function () {
     it('expect to reject with wrong connection', function (done) {
       this.timeout(2000);
       mongoAdapter = new MongoAdapter(
-        'mongodb://127.0.0.1:6969?connectTimeoutMS=1000'
+        'mongodb://127.0.0.1:6969/?connectTimeoutMS=1000'
       );
       var promise = mongoAdapter.getDatabase();
       expect(promise).to.be.an.instanceOf(Promise);

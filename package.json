@@ -28,6 +28,7 @@
   "homepage": "https://github.com/back4app/back4app-entity-mongodb#readme",
   "devDependencies": {
     "chai": "^3.3.0",
+    "chai-as-promised": "^5.1.0",
     "gulp": "^3.9.0",
     "gulp-jscs": "^2.0.0",
     "gulp-jscs-stylish": "^1.2.1",
@@ -38,7 +39,7 @@
     "mocha": "^2.3.3"
   },
   "dependencies": {
-    "@back4app/back4app-entity": "^1.0.4",
+    "@back4app/back4app-entity": "1.0.6",
     "bluebird": "^2.10.2",
     "mongodb": "^2.0.46"
   }
