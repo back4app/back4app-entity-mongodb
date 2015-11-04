@@ -26,12 +26,12 @@
     "Promise": true,
 
     // global for tests
-    "it": false,
-    "beforeEach": false,
-    "afterEach": false,
     "describe": false,
+    "context": false,
+    "it": false,
     "before": false,
     "after": false,
-    "context": false
+    "beforeEach": false,
+    "afterEach": false
   }
 }
