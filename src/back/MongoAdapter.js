@@ -5,9 +5,8 @@ var Promise = require('bluebird');
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var entity = require('@back4app/back4app-entity');
-var models = entity.models;
-var Entity = models.Entity;
-var Attribute = models.attributes.Attribute;
+var Entity = entity.models.Entity;
+var Attribute = entity.models.attributes.Attribute;
 var classes = entity.utils.classes;
 var objects = entity.utils.objects;
 var Adapter = entity.adapters.Adapter;
@@ -651,6 +650,19 @@ function documentToObject(document, adapterName) {
   return new EntityClass(obj);
 }
 
+/**
+ * Delete object in the database matching given id.
+ * @name module:back4app-entity-mongodb.MongoAdapter#deleteObject
+ * @function
+ * @returns {Promise.<undefined|Error>} Promise that resolves if argument
+ * is valid or throws error message if not valid.
+ * @example
+ * var promise = mongoAdapter.deleteObject(car);
+ * promise
+ *  .then(resolve)
+ *  .catch(reject);
+ *
+ */
 function deleteObject(entityObject) {
 
   var mongoAdapter = this;
@@ -672,12 +684,16 @@ function deleteObject(entityObject) {
 
     var promises = [];
 
+    //search for possible superclasses of entityObject
     while (EntityClass) {
       promises.push(_deleteObject(EntityClass, entityObject.id));
       EntityClass = EntityClass.General;
     }
 
+    //restore entityObject
     EntityClass = entityObject.Entity;
+
+    //search for possible subclasses of entityObject
     var entitySpecializations = EntityClass.specializations;
     for (var specialization in entitySpecializations) {
       promises.push
@@ -695,7 +711,6 @@ function deleteObject(entityObject) {
           return database
             .collection(EntityClass.specification.name)
             .findOneAndDelete({_id: id});
-
         })
         .then(function (result) {
           expect(result.ok).to.equal(
@@ -732,7 +747,7 @@ function getEntityCollectionName(Entity) {
     'Entity (it has to be an Entity class)'
   );
 
-  expect(classes.isGeneral(models.Entity, Entity)).to.equal(
+  expect(classes.isGeneral(entity.models.Entity, Entity)).to.equal(
     true,
     'Invalid argument "Entity" when getting the collection name of an ' +
     'Entity (it has to be an Entity class)'
