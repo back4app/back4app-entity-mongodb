@@ -345,6 +345,7 @@ function MongoAdapter(connectionUrl, connectionOptions) {
 classes.generalize(Adapter, MongoAdapter);
 
 MongoAdapter.prototype.insertObject = insertObject;
+MongoAdapter.prototype.updateObject = updateObject;
 MongoAdapter.prototype.objectToDocument = objectToDocument;
 MongoAdapter.prototype.getEntityCollectionName = getEntityCollectionName;
 
@@ -388,21 +389,64 @@ function insertObject(entityObject) {
   });
 }
 
+function updateObject(entityObject) {
+  var mongoAdapter = this;
+
+  expect(arguments).to.have.length(
+    1,
+    'Invalid arguments length when updating an object in a MongoAdapter ' +
+    '(it has to be passed 1 argument)'
+  );
+
+  return new Promise(function (resolve, reject) {
+    expect(entityObject).to.be.an.instanceOf(
+      Entity,
+      'Invalid argument "entityObject" when updating an object in a ' +
+      'MongoAdapter (it has to be an Entity instance)'
+    );
+
+    var EntityClass = entityObject.Entity;
+
+    mongoAdapter
+      .getDatabase()
+      .then(function (database) {
+        return database
+          .collection(getEntityCollectionName(EntityClass))
+          .updateOne(
+            {_id: entityObject.id},
+            {$set: objectToDocument(entityObject, true)}
+          );
+      })
+      .then(function (result) {
+        expect(result.matchedCount).to.equal(
+          1,
+          'Invalid result.matchedCount return of collection.updateOne ' +
+          'in MongoDB driver when inserting an Object (it should be 1)'
+        );
+
+        resolve();
+      })
+      .catch(reject);
+  });
+}
+
 /**
  * Converts an Entity object in a MongoDB document.
  * @name module:back4app-entity-mongodb.MongoAdapter#objectToDocument
  * @function
  * @param {!module:back4app-entity/models.Entity} entityObject The Entity object
  * to be converted to a MongoDB document.
+ * @param {?boolean} [onlyDirty=false] Sets if only dirty attributes will be
+ * added to the document.
  * @returns {Object.<string, *>} The MongoDB document that is a dictionary.
  * @example
  * var myDocument = mongoAdapter.objectToDocument(myObject);
  */
-function objectToDocument(entityObject) {
-  expect(arguments).to.have.length(
-    1,
+function objectToDocument(entityObject, onlyDirty) {
+  expect(arguments).to.have.length.below(
+    3,
     'Invalid arguments length when converting an entity object in a ' +
-    'MongoDB document (it has to be passed 1 argument)'
+    'MongoDB document (it has to be passed less than 3 arguments)'
   );
 
   expect(entityObject).to.be.an.instanceOf(
@@ -411,22 +455,35 @@ function objectToDocument(entityObject) {
     'MongoDB document (it has to be an Entity instances)'
   );
 
+  if (onlyDirty) {
+    expect(onlyDirty).to.be.a(
+      'boolean',
+      'Invalid argument "onlyDirty" when converting an entity object in a ' +
+      'MongoDB document (it has to be a boolean)'
+    );
+  }
+
   var document = {};
 
   var entityAttributes = entityObject.Entity.attributes;
 
   for (var attributeName in entityAttributes) {
-    var attribute = entityAttributes[attributeName];
-    var attributeDataName = attribute.getDataName(entityObject.adapterName);
-    var attributeDataValue = attribute.getDataValue(
-      entityObject[attributeName]
-    );
-    document[attributeDataName] = attributeDataValue;
+    if (!onlyDirty || entityObject.isDirty(attributeName)) {
+      var attribute = entityAttributes[attributeName];
+      var attributeDataName = attribute.getDataName(entityObject.adapterName);
+      var attributeDataValue = attribute.getDataValue(
+        entityObject[attributeName]
+      );
+      document[attributeDataName] = attributeDataValue;
+    }
   }
 
   document.Entity = entityObject.Entity.specification.name;
 
-  document._id = entityObject.id;
+  if (!onlyDirty) {
+    document._id = entityObject.id;
+  }
+
   delete document.id;
 
   return document;
