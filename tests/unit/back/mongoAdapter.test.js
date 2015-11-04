@@ -621,7 +621,18 @@ describe('MongoAdapter', function () {
       }).to.throw(AssertionError);
 
       expect(function () {
-        mongoAdapter.objectToDocument(new (Entity.specify('Entity20'))(), null);
+        mongoAdapter.objectToDocument(
+          new (Entity.specify('Entity20'))(),
+          {}
+        );
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.objectToDocument(
+          new (Entity.specify('Entity20'))(),
+          false,
+          null
+        );
       }).to.throw(AssertionError);
     });
 
@@ -677,6 +688,28 @@ describe('MongoAdapter', function () {
           id: myEntity301.id
         },
         a7: null
+      });
+
+      var myEntity303 = new MyEntity30(
+        {
+          id: myEntity302.id,
+          a1: myObject,
+          a6: myEntity301
+        },
+        {
+          clean: true
+        }
+      );
+
+      expect(mongoAdapter.objectToDocument(myEntity303, true)).to.deep.equal({
+        Entity: 'MyEntity30'
+      });
+
+      myEntity303.a1 = {};
+
+      expect(mongoAdapter.objectToDocument(myEntity303, true)).to.deep.equal({
+        Entity: 'MyEntity30',
+        a1: {}
       });
     });
   });
