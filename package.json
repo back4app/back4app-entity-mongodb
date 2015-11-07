@@ -39,8 +39,8 @@
     "mocha": "^2.3.3"
   },
   "dependencies": {
-    "@back4app/back4app-entity": "1.0.6",
-    "bluebird": "^2.10.2",
+    "@back4app/back4app-entity": "^1.0.7",
+    "bluebird": "^3.0.5",
     "mongodb": "^2.0.46"
   }
 }
