@@ -1,6 +1,6 @@
 {
   "name": "@back4app/back4app-entity-mongodb",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "back{4}app entity persistence mongodb plugin",
   "main": "index.js",
   "scripts": {
