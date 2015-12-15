@@ -1,7 +1,3 @@
-/**
- * Created by walkirya on 26/10/15.
- */
-
 'use strict';
 
 var chai = require('chai');

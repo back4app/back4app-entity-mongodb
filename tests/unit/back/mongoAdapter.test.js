@@ -1,7 +1,3 @@
-//
-// Created by davimacedo on 22/10/15.
-//
-
 'use strict';
 
 var chai = require('chai');

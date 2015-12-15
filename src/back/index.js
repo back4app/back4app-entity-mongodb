@@ -1,3 +1,5 @@
+'use strict';
+
 var MongoAdapter = require('./MongoAdapter');
 var errors = require('./errors');
 
