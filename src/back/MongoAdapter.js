@@ -223,6 +223,16 @@ function MongoAdapter(connectionUrl, connectionOptions) {
     }
   }
 
+  /**
+   * Validades the dataName attribute and registers the Entity
+   * on Adapter's Collection Dictionary.
+   * @name module:back4app-entity-mongodb.MongoAdapter#loadEntity
+   * @function
+   * @param {!module:back4app-entity/models/Entity} Entity The Entity Class to be
+   * validated and added to Adapter's Collection dictionary.
+   * @example
+   * Entity.adapter.loadEntity(Entity);
+   */
   function loadEntity(Entity) {
     expect(arguments).to.have.length(
       1,
@@ -272,6 +282,18 @@ function MongoAdapter(connectionUrl, connectionOptions) {
     _collections[Entity.dataName] = [];
   }
 
+  /**
+   * Validades the dataName attribute of an Attribute and
+   * registers the Attribute on the Entity on Collection Dictionary.
+   * @name module:back4app-entity-mongodb.MongoAdapter#loadEntityAttribute
+   * @function
+   * @param {!module:back4app-entity/models/Entity} Entity The Entity Class to have
+   * attribute validated and added to Entity on Collection dictionary.
+   * @param {!module:back4app-entity/models/attributes.Attribute} attribute
+   * The Attribute to be validated and added to Entity.
+   * @example
+   * _Entity.adapter.loadEntityAttribute(_Entity, attribute);
+   */
   function loadEntityAttribute(Entity, attribute) {
     expect(arguments).to.have.length(
       2,
@@ -355,6 +377,21 @@ MongoAdapter.prototype.objectToDocument = objectToDocument;
 MongoAdapter.prototype.documentToObject = documentToObject;
 MongoAdapter.prototype.getEntityCollectionName = getEntityCollectionName;
 
+/**
+ * Saves an Entity instance, inserting on DB.
+ * @name module:back4app-entity-mongodb.MongoAdapter#insertObject
+ * @function
+ * @param {!module:module:back4app-entity/models/Entity} entityObject
+ * Entity instance being saved, to insert on DB.
+ * @returns {Promise.<undefined|Error>} Promise that returns nothing if succeed
+ * and the Error if failed.
+ * @example
+ * entity.adapter.insertObject(entity)
+ *   .then(function () {
+ *     entity.isNew = false;
+ *     entity.clean();
+ *   });
+ */
 function insertObject(entityObject) {
   var mongoAdapter = this;
 
@@ -395,6 +432,21 @@ function insertObject(entityObject) {
   });
 }
 
+/**
+ * Updates an Entity instance, changing on DB.
+ * @name module:back4app-entity-mongodb.MongoAdapter#updateObject
+ * @function
+ * @param {!module:module:back4app-entity/models/Entity} entityObject
+ * Entity instance being updates, to modify on DB.
+ * @returns {Promise.<undefined|Error>} Promise that returns nothing if succeed
+ * and the Error if failed.
+ * @example
+ * entity.adapter.updateObject(entity)
+ *   .then(function () {
+ *     entity.isNew = false;
+ *     entity.clean();
+ *   });
+ */
 function updateObject(entityObject) {
   var mongoAdapter = this;
 
@@ -499,6 +551,9 @@ function objectToDocument(entityObject, onlyDirty) {
  * Get object from the database matching given query.
  * @name module:back4app-entity-mongodb.MongoAdapter#getObject
  * @function
+ * @param {!module:back4app-entity/models.Entity} entityObject The Entity Class
+ * which instance will be searched within the collections.
+ * @param {?Object} query Object for query search.
  * @returns {Promise.<object|Error>} Promise that returns found object if
  * succeed or Error if failed.
  * @example
@@ -593,6 +648,16 @@ function findObjects(EntityClass, query) {
     .then(populateEntities);
 }
 
+/**
+ * Gets the adapter to be used by the Entity class.
+ * @name module:back4app-entity-mongodb.MongoAdapter~_buildCursor
+ * @function
+ * @returns {module:back4app-entity/adapters.Adapter}
+ * @throws {module:back4app-entity/models/errors.AdapterNotFoundError}
+ * @private
+ * @example
+ * var cursor = _buildCursor(db, EntityClass, query);
+ */
 function _buildCursor(db, EntityClass, query) {
   // copy query to not mess with user's object
   query = objects.copy(query);
