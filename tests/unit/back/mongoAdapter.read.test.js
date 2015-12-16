@@ -3,6 +3,7 @@
 var chai = require('chai');
 var expect = chai.expect;
 var Assertion = chai.Assertion;
+var AssertionError = chai.AssertionError;
 var chaiAsPromised = require('chai-as-promised');
 var mongodb = require('mongodb');
 var Promise = require('bluebird');
@@ -100,6 +101,26 @@ describe('MongoAdapter', function () {
       var result = mongoAdapter.getObject(Person, {});
       expect(result).to.be.instanceOf(Promise);
       result.catch(function () {}); // ignore query errors, only testing type
+    });
+
+    it('should not work with wrong arguments', function () {
+      // few arguments
+      expect(function () {
+        mongoAdapter.getObject();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.getObject(Person);
+      }).to.throw(AssertionError);
+
+      // too many arguments
+      expect(function () {
+        mongoAdapter.getObject(Person, {}, {});
+      }).to.throw(AssertionError);
+
+      // wrong arguments
+      expect(mongoAdapter.getObject({}, {}))
+        .to.eventually.be.rejectedWith(AssertionError);
     });
 
     describe('simple objects', function () {
@@ -364,6 +385,26 @@ describe('MongoAdapter', function () {
       var result = mongoAdapter.findObjects(Person, {});
       expect(result).to.be.instanceOf(Promise);
       result.catch(function () {}); // ignore query errors, only testing type
+    });
+
+    it('should not work with wrong arguments', function () {
+      // few arguments
+      expect(function () {
+        mongoAdapter.findObjects();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.findObjects(Person);
+      }).to.throw(AssertionError);
+
+      // too many arguments
+      expect(function () {
+        mongoAdapter.findObjects(Person, {}, {});
+      }).to.throw(AssertionError);
+
+      // wrong arguments
+      expect(mongoAdapter.findObjects({}, {}))
+        .to.eventually.be.rejectedWith(AssertionError);
     });
 
     describe('simple objects', function () {

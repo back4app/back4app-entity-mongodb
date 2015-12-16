@@ -2,8 +2,10 @@
 
 var chai = require('chai');
 var expect = chai.expect;
+var AssertionError = chai.AssertionError;
 var Promise = require('bluebird');
 var mongodb = require('mongodb');
+
 var Entity = require('@back4app/back4app-entity').models.Entity;
 var MongoAdapter = require('../../../').MongoAdapter;
 
@@ -150,6 +152,22 @@ describe('Delete method MongoAdapter', function () {
       var result = mongoAdapter.deleteObject({});
       expect(result).to.be.instanceOf(Promise);
       result.catch(function () {}); // ignore query errors, only testing type
+    });
+
+    it('expect to not work with wrong arguments', function () {
+      expect(function () {
+        mongoAdapter.deleteObject();
+      }).to.throw(AssertionError);
+
+      mongoAdapter
+        .deleteObject({})
+        .catch(function (error) {
+          expect(error).to.be.an.instanceOf(AssertionError);
+        });
+
+      expect(function () {
+        mongoAdapter.deleteObject(vehicle, null);
+      }).to.throw(AssertionError);
     });
 
     it('expect to delete a single class', function () {
