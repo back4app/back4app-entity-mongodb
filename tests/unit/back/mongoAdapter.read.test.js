@@ -47,7 +47,8 @@ describe('MongoAdapter', function () {
     name: 'Author',
     attributes: {
       readers: {type: 'Number'},
-      books: {type: 'Book', multiplicity: '*'}
+      books: {type: 'Book', multiplicity: '*'},
+      bestSeller: {type: 'Book', multiplicity: '1'}
     }
   });
 
@@ -258,7 +259,8 @@ describe('MongoAdapter', function () {
         books: [
           new Book({id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}), // Dracula
           new Book({id: '1da78d86-de7a-4818-8737-e5723afdca85'}) // Hamlet
-        ]
+        ],
+        bestSeller: new Book({id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'})
       });
 
       beforeEach(function () {
@@ -268,7 +270,9 @@ describe('MongoAdapter', function () {
             {Entity: 'Book', _id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d',
               title: 'Dracula', publishedAt: new Date('1986-05-12')},
             {Entity: 'Book', _id: '1da78d86-de7a-4818-8737-e5723afdca85',
-              title: 'Hamlet', publishedAt: new Date('2005-08-01')}
+              title: 'Hamlet', publishedAt: new Date('2005-08-01')},
+            {Entity: 'Book', _id: '4232e3ba-129e-4507-a908-4fef92c7bbc7',
+              title: 'Harry Potter', publishedAt: new Date('1997-06-26')}
           ]),
           db.collection('Person').insertOne({// Author --> Person
             Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
@@ -276,7 +280,10 @@ describe('MongoAdapter', function () {
             books: [
               {Entity: 'Book', id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'},
               {Entity: 'Book', id: '1da78d86-de7a-4818-8737-e5723afdca85'}
-            ]
+            ],
+            bestSeller: {
+              Entity: 'Book', id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'
+            }
           })
         ]);
       });
@@ -509,11 +516,12 @@ describe('MongoAdapter', function () {
       // back4app entity instances
       var john = new Author({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
         name: 'John', age: 30, married: true, readers: 1000,
-        // books not populated
+        // books populated with id only
         books: [
           new Book({id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}), // Dracula
           new Book({id: '1da78d86-de7a-4818-8737-e5723afdca85'}) // Hamlet
-        ]
+        ],
+        bestSeller: new Book({id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'})
       });
 
       beforeEach(function () {
@@ -523,7 +531,9 @@ describe('MongoAdapter', function () {
             {Entity: 'Book', _id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d',
               title: 'Dracula', publishedAt: new Date('1986-05-12')},
             {Entity: 'Book', _id: '1da78d86-de7a-4818-8737-e5723afdca85',
-              title: 'Hamlet', publishedAt: new Date('2005-08-01')}
+              title: 'Hamlet', publishedAt: new Date('2005-08-01')},
+            {Entity: 'Book', _id: '4232e3ba-129e-4507-a908-4fef92c7bbc7',
+              title: 'Harry Potter', publishedAt: new Date('1997-06-26')}
           ]),
           db.collection('Person').insertOne({// Author --> Person
             Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
@@ -531,7 +541,10 @@ describe('MongoAdapter', function () {
             books: [
               {Entity: 'Book', id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'},
               {Entity: 'Book', id: '1da78d86-de7a-4818-8737-e5723afdca85'}
-            ]
+            ],
+            bestSeller: {
+              Entity: 'Book', id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'
+            }
           })
         ]);
       });
