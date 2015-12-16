@@ -708,30 +708,6 @@ describe('MongoAdapter', function () {
         a1: {}
       });
     });
-
-    it('expect to work on Entity with dataName', function () {
-      var MyEntity31 = Entity.specify({
-        name: 'MyEntity31',
-        dataName: 'MyEntity31DataName',
-        attributes: {
-          a1: {
-            type: 'String'
-          },
-          a2: {
-            type: 'Number'
-          }
-        }
-      });
-
-      var myEntity = new MyEntity31({a1: 'Hello', a2: 1234});
-
-      expect(mongoAdapter.objectToDocument(myEntity)).to.deep.equal({
-        Entity: 'MyEntity31DataName',
-        _id: myEntity.id,
-        a1: 'Hello',
-        a2: 1234
-      });
-    });
   });
 
   describe('#documentToObject', function () {

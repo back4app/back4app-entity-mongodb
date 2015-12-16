@@ -484,7 +484,7 @@ function objectToDocument(entityObject, onlyDirty) {
     }
   }
 
-  document.Entity = entityObject.Entity.dataName;
+  document.Entity = entityObject.Entity.specification.name;
 
   if (!onlyDirty) {
     document._id = entityObject.id;
