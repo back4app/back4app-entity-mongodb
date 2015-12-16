@@ -623,6 +623,12 @@ function _buildCursor(db, EntityClass, query) {
  * </pre>
  */
 function documentToObject(document, adapterName) {
+  expect(arguments).to.have.length(
+    2,
+    'Invalid arguments length when converting a MongoDB document into ' +
+    'an entity object (it has to be passed 2 arguments)'
+  );
+
   var obj = {};
 
   // replace `_id` with `id`
