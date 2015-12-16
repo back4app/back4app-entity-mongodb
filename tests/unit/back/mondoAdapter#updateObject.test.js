@@ -288,6 +288,53 @@ describe('MongoAdapter#updateObject', function () {
       });
   });
 
+  it('expect to work on Entity with dataName', function (done) {
+    var MyEntity60 = Entity.specify({
+      name: 'MyEntity60',
+      dataName: 'MyEntity60DataName',
+      attributes: {
+        title: {
+          type: 'String'
+        }
+      }
+    });
+
+    var entity = new MyEntity60({title: 'Hello'});
+
+    defaultAdapter
+      .insertObject(entity)
+      .then(function () {
+        entity.title = 'Good bye!';
+        return defaultAdapter.updateObject(entity);
+      })
+      .then(function () {
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('MyEntity60DataName')
+          .find({_id: entity.id})
+          .toArray();
+      })
+      .then(function (documents) {
+        expect(documents).to.have.length(1);
+        expect(documents[0]).to.deep.equal(
+          defaultAdapter.objectToDocument(entity, false)
+        );
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('MyEntity60DataName')
+          .deleteOne({
+            _id: entity.id
+          });
+      })
+      .then(function () {
+        done();
+      });
+  });
+
   after(function (done) {
     defaultAdapter
       .getDatabase()
