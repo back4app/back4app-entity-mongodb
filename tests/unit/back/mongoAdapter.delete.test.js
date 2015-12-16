@@ -146,6 +146,12 @@ describe('Delete method MongoAdapter', function () {
       return db.dropDatabase();
     });
 
+    it('expect to return a promise', function () {
+      var result = mongoAdapter.deleteObject({});
+      expect(result).to.be.instanceOf(Promise);
+      result.catch(function () {}); // ignore query errors, only testing type
+    });
+
     it('expect to delete a single class', function () {
       return mongoAdapter.deleteObject(vehicle)
         .then(function () {
