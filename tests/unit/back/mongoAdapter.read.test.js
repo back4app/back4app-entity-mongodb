@@ -61,6 +61,17 @@ describe('MongoAdapter', function () {
     }
   });
 
+  var BlogPost = Entity.specify({
+    name: 'BlogPost',
+    attributes: {
+      title: {type: 'String'},
+      date: {type: 'Date'},
+      published: {type: 'Boolean'},
+      visitors: {type: 'Number'},
+      meta: {type: 'Object'}
+    }
+  });
+
   var $User = Entity.specify({
     name: '$User',
     dataName: 'User',
@@ -132,15 +143,35 @@ describe('MongoAdapter', function () {
       var will = new Person({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
         name: 'Will', age: 30, married: false});
 
+      var blogPost = new BlogPost({
+        id: 'a587c64f-f149-4cc5-8a1a-f165d32f2a76',
+        title: 'First Post',
+        date: new Date('2015-12-10'),
+        published: true,
+        visitors: 1200,
+        meta: {author: 'Johnny', tags: ['food', 'lifestyle']}
+      });
+
       beforeEach(function () {
         // populate test database
-        return db.collection('Person').insertMany([
-          {Entity: 'Person', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
-            name: 'John', age: 30, married: true},
-          {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
-            name: 'Theo', age: 20, married: false},
-          {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
-            name: 'Will', age: 30, married: false}
+        return Promise.all([
+          db.collection('Person').insertMany([
+            {Entity: 'Person', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
+              name: 'John', age: 30, married: true},
+            {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
+              name: 'Theo', age: 20, married: false},
+            {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
+              name: 'Will', age: 30, married: false}
+          ]),
+          db.collection('BlogPost').insertOne({
+            Entity: 'BlogPost',
+            _id: 'a587c64f-f149-4cc5-8a1a-f165d32f2a76',
+            title: 'First Post',
+            date: new Date('2015-12-10'),
+            published: true,
+            visitors: 1200,
+            meta: {author: 'Johnny', tags: ['food', 'lifestyle']}
+          })
         ]);
       });
 
@@ -181,6 +212,14 @@ describe('MongoAdapter', function () {
         }))
           .to.become(john)
           .and.instanceOf(Person);
+      });
+
+      it('should get object with multiple attribute types', function () {
+        return expect(mongoAdapter.getObject(BlogPost, {
+          id: 'a587c64f-f149-4cc5-8a1a-f165d32f2a76'
+        }))
+          .to.become(blogPost)
+          .and.instanceOf(BlogPost);
       });
 
       it('should reject query with no result', function () {
