@@ -138,6 +138,60 @@ describe('MongoAdapter#updateObject', function () {
       });
   });
 
+  it('expect to update inheritances correctly', function (done) {
+    var A2 = Entity.specify({
+      name: 'A2',
+      attributes: {
+        a1: {type: 'String'},
+        a2: {type: 'String'}
+      }
+    });
+
+    var B2 = A2.specify({
+      name: 'B2',
+      attributes: {
+        b1: {type: 'String'},
+        b2: {type: 'String'}
+      }
+    });
+
+    var entity = new B2({
+      a1: 'orig-a1',
+      a2: 'orig-a2',
+      b1: 'orig-b1',
+      b2: 'orig-b2'
+    });
+
+    defaultAdapter.insertObject(entity)
+      .then(function () {
+        entity.a1 = 'new-a1';
+        entity.b1 = 'new-b1';
+        return defaultAdapter.updateObject(entity);
+      })
+      .then(function () {
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('A2')
+          .find({_id: entity.id}).toArray();
+      })
+      .then(function (documents) {
+        expect(documents).to.have.length(1);
+        expect(documents[0])
+          .to.deep.equal(defaultAdapter.objectToDocument(entity, false));
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('A2')
+          .deleteOne({_id: entity.id});
+      })
+      .then(function () {
+        done();
+      });
+  });
+
   it('expect to update foreign keys correctly', function (done) {
     var Used = Entity.specify('Used2');
 
