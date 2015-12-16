@@ -473,6 +473,47 @@ describe('MongoAdapter#insertObject', function () {
       });
   });
 
+  it('expect to work on Entity with dataName', function (done) {
+    var MyEntity50 = Entity.specify({
+      name: 'MyEntity50',
+      dataName: 'MyEntity50DataName',
+      attributes: {
+        title: {
+          type: 'String'
+        }
+      }
+    });
+
+    var entity = new MyEntity50({title: 'Hello'});
+
+    defaultAdapter
+      .insertObject(entity)
+      .then(function () {
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('MyEntity50DataName')
+          .find({_id: entity.id})
+          .toArray();
+      })
+      .then(function (documents) {
+        expect(documents).to.have.length(1);
+        expect(documents[0]).to.deep.equal(
+          defaultAdapter.objectToDocument(entity)
+        );
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('MyEntity50DataName')
+          .deleteOne({_id: entity.id});
+      })
+      .then(function () {
+        done();
+      });
+  });
+
   after(function (done) {
     defaultAdapter
       .getDatabase()
