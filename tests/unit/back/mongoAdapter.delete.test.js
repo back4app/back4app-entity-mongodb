@@ -65,6 +65,14 @@ describe('Delete method MongoAdapter', function () {
       }
     });
 
+    var Plane = Entity.specify({
+      name: 'Plane',
+      dataName: 'Airplane',
+      attributes: {
+        brand: {type: 'String'}
+      }
+    });
+
     var bmw = new Bmw({
       id: '00000000-0000-4000-a000-000000000111',
       regPlate: 'bbb-000',
@@ -95,6 +103,10 @@ describe('Delete method MongoAdapter', function () {
       id: '00000000-0000-4000-a000-000000000777',
       regPlate: 'ccc-000', year: '2015',
       wheels: [wheel1, wheel2, wheel3, wheel4]
+    });
+    var plane = new Plane({
+      id: '81667bd0-3945-41ac-bcfa-302b1e9d13c3',
+      brand: 'Boeing'
     });
 
     //MongoDb documents
@@ -134,12 +146,18 @@ describe('Delete method MongoAdapter', function () {
         {id: '00000000-0000-4000-a000-000000000666', Entity: 'Wheel'}
       ]
     };
+    var planeD = {
+      _id: '81667bd0-3945-41ac-bcfa-302b1e9d13c3',
+      Entity: 'Plane',
+      brand: 'Boeing'
+    };
 
     beforeEach(function () {
       //populate test database
       return Promise.all([
         db.collection('Wheel').insertMany([wheel1D, wheel2D, wheel3D, wheel4D]),
-        db.collection('Vehicle').insertMany([bmwD, vehicleD, carD])
+        db.collection('Vehicle').insertMany([bmwD, vehicleD, carD]),
+        db.collection('Airplane').insertMany([planeD]) // dataName: Airplane
       ]);
     });
 
@@ -270,5 +288,17 @@ describe('Delete method MongoAdapter', function () {
             expect(docs.length).to.equal(1);
           });
       });
+
+    it('expect to delete entity with dataName', function () {
+      return mongoAdapter.deleteObject(plane)
+        .then(function () {
+          return db.collection('Airplane')
+            .find({_id: '81667bd0-3945-41ac-bcfa-302b1e9d13c3'})
+            .toArray();
+        })
+        .then(function (docs) {
+          expect(docs.length).to.equal(0);
+        });
+    });
   });
 });
