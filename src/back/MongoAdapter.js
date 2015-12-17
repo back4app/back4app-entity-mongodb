@@ -224,8 +224,7 @@ function MongoAdapter(connectionUrl, connectionOptions) {
   }
 
   /**
-   * Validades the dataName attribute and registers the Entity
-   * on Adapter's Collection Dictionary.
+   * Registers the Entity on Adapter's Collection Dictionary, if valid.
    * @name module:back4app-entity-mongodb.MongoAdapter#loadEntity
    * @function
    * @param {!module:back4app-entity/models/Entity} Entity The Entity Class to be
@@ -283,12 +282,11 @@ function MongoAdapter(connectionUrl, connectionOptions) {
   }
 
   /**
-   * Validades the dataName attribute of an Attribute and
-   * registers the Attribute on the Entity on Collection Dictionary.
+   * Registers the Attribute on the Entity on Collection Dictionary, if valid.
    * @name module:back4app-entity-mongodb.MongoAdapter#loadEntityAttribute
    * @function
-   * @param {!module:back4app-entity/models/Entity} Entity The Entity Class to have
-   * attribute validated and added to Entity on Collection dictionary.
+   * @param {!module:back4app-entity/models/Entity} Entity The Entity Class
+   * to have attribute validated and added to Entity on Collection dictionary.
    * @param {!module:back4app-entity/models/attributes.Attribute} attribute
    * The Attribute to be validated and added to Entity.
    * @example
@@ -613,6 +611,9 @@ function getObject(EntityClass, query) {
  * Find objects in the database matching given query.
  * @name module:back4app-entity-mongodb.MongoAdapter#findObjects
  * @function
+ * @param {!module:back4app-entity/models.Entity} entityObject The Entity Class
+ * which instance will be searched within the collections.
+ * @param {?Object} query Object for query search.
  * @returns {Promise.<object|Error>} Promise that returns found objects if
  * succeed or Error if failed.
  * @example
@@ -649,11 +650,15 @@ function findObjects(EntityClass, query) {
 }
 
 /**
- * Gets the adapter to be used by the Entity class.
+ * Creates the DB Cursor, which iterates within the results from a query
  * @name module:back4app-entity-mongodb.MongoAdapter~_buildCursor
  * @function
- * @returns {module:back4app-entity/adapters.Adapter}
- * @throws {module:back4app-entity/models/errors.AdapterNotFoundError}
+ * @param {!module:mongodb/Db} db Db instance from MongoDB Driver.
+ * @param {!module:back4app-entity/models.Entity} entityObject The Entity Class
+ * which instance will be searched within the collections.
+ * @param {?Object} query Object for query search.
+ * @returns {module:mongodb/Cursor} MongoDB Cursor instance pointing to results
+ * based on a query.
  * @private
  * @example
  * var cursor = _buildCursor(db, EntityClass, query);
