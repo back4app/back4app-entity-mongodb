@@ -227,8 +227,8 @@ function MongoAdapter(connectionUrl, connectionOptions) {
    * Registers the Entity on Adapter's Collection Dictionary, if valid.
    * @name module:back4app-entity-mongodb.MongoAdapter#loadEntity
    * @function
-   * @param {!module:back4app-entity/models/Entity} Entity The Entity Class to be
-   * validated and added to Adapter's Collection dictionary.
+   * @param {!module:back4app-entity/models/Entity} Entity The Entity Class
+   * to be validated and added to Adapter's Collection dictionary.
    * @example
    * Entity.adapter.loadEntity(Entity);
    */
