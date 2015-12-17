@@ -1,6 +1,4 @@
-//
-// Created by davimacedo on 22/10/15.
-//
+'use strict';
 
 var settings = require('@back4app/back4app-entity').settings;
 var MongoAdapter = require('../../').MongoAdapter;

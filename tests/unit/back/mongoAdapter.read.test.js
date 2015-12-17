@@ -3,6 +3,7 @@
 var chai = require('chai');
 var expect = chai.expect;
 var Assertion = chai.Assertion;
+var AssertionError = chai.AssertionError;
 var chaiAsPromised = require('chai-as-promised');
 var mongodb = require('mongodb');
 var Promise = require('bluebird');
@@ -47,7 +48,8 @@ describe('MongoAdapter', function () {
     name: 'Author',
     attributes: {
       readers: {type: 'Number'},
-      books: {type: 'Book', multiplicity: '*'}
+      books: {type: 'Book', multiplicity: '*'},
+      bestSeller: {type: 'Book', multiplicity: '1'}
     }
   });
 
@@ -56,6 +58,17 @@ describe('MongoAdapter', function () {
     attributes: {
       title: {type: 'String'},
       publishedAt: {type: 'Date'}
+    }
+  });
+
+  var BlogPost = Entity.specify({
+    name: 'BlogPost',
+    attributes: {
+      title: {type: 'String'},
+      date: {type: 'Date'},
+      published: {type: 'Boolean'},
+      visitors: {type: 'Number'},
+      meta: {type: 'Object'}
     }
   });
 
@@ -101,6 +114,26 @@ describe('MongoAdapter', function () {
       result.catch(function () {}); // ignore query errors, only testing type
     });
 
+    it('should not work with wrong arguments', function () {
+      // few arguments
+      expect(function () {
+        mongoAdapter.getObject();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.getObject(Person);
+      }).to.throw(AssertionError);
+
+      // too many arguments
+      expect(function () {
+        mongoAdapter.getObject(Person, {}, {});
+      }).to.throw(AssertionError);
+
+      // wrong arguments
+      expect(mongoAdapter.getObject({}, {}))
+        .to.eventually.be.rejectedWith(AssertionError);
+    });
+
     describe('simple objects', function () {
       // back4app entity instances
       var john = new Person({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
@@ -110,15 +143,35 @@ describe('MongoAdapter', function () {
       var will = new Person({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
         name: 'Will', age: 30, married: false});
 
+      var blogPost = new BlogPost({
+        id: 'a587c64f-f149-4cc5-8a1a-f165d32f2a76',
+        title: 'First Post',
+        date: new Date('2015-12-10'),
+        published: true,
+        visitors: 1200,
+        meta: {author: 'Johnny', tags: ['food', 'lifestyle']}
+      });
+
       beforeEach(function () {
         // populate test database
-        return db.collection('Person').insertMany([
-          {Entity: 'Person', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
-            name: 'John', age: 30, married: true},
-          {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
-            name: 'Theo', age: 20, married: false},
-          {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
-            name: 'Will', age: 30, married: false}
+        return Promise.all([
+          db.collection('Person').insertMany([
+            {Entity: 'Person', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
+              name: 'John', age: 30, married: true},
+            {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
+              name: 'Theo', age: 20, married: false},
+            {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
+              name: 'Will', age: 30, married: false}
+          ]),
+          db.collection('BlogPost').insertOne({
+            Entity: 'BlogPost',
+            _id: 'a587c64f-f149-4cc5-8a1a-f165d32f2a76',
+            title: 'First Post',
+            date: new Date('2015-12-10'),
+            published: true,
+            visitors: 1200,
+            meta: {author: 'Johnny', tags: ['food', 'lifestyle']}
+          })
         ]);
       });
 
@@ -159,6 +212,14 @@ describe('MongoAdapter', function () {
         }))
           .to.become(john)
           .and.instanceOf(Person);
+      });
+
+      it('should get object with multiple attribute types', function () {
+        return expect(mongoAdapter.getObject(BlogPost, {
+          id: 'a587c64f-f149-4cc5-8a1a-f165d32f2a76'
+        }))
+          .to.become(blogPost)
+          .and.instanceOf(BlogPost);
       });
 
       it('should reject query with no result', function () {
@@ -258,7 +319,8 @@ describe('MongoAdapter', function () {
         books: [
           new Book({id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}), // Dracula
           new Book({id: '1da78d86-de7a-4818-8737-e5723afdca85'}) // Hamlet
-        ]
+        ],
+        bestSeller: new Book({id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'})
       });
 
       beforeEach(function () {
@@ -268,7 +330,9 @@ describe('MongoAdapter', function () {
             {Entity: 'Book', _id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d',
               title: 'Dracula', publishedAt: new Date('1986-05-12')},
             {Entity: 'Book', _id: '1da78d86-de7a-4818-8737-e5723afdca85',
-              title: 'Hamlet', publishedAt: new Date('2005-08-01')}
+              title: 'Hamlet', publishedAt: new Date('2005-08-01')},
+            {Entity: 'Book', _id: '4232e3ba-129e-4507-a908-4fef92c7bbc7',
+              title: 'Harry Potter', publishedAt: new Date('1997-06-26')}
           ]),
           db.collection('Person').insertOne({// Author --> Person
             Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
@@ -276,7 +340,10 @@ describe('MongoAdapter', function () {
             books: [
               {Entity: 'Book', id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'},
               {Entity: 'Book', id: '1da78d86-de7a-4818-8737-e5723afdca85'}
-            ]
+            ],
+            bestSeller: {
+              Entity: 'Book', id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'
+            }
           })
         ]);
       });
@@ -357,6 +424,26 @@ describe('MongoAdapter', function () {
       var result = mongoAdapter.findObjects(Person, {});
       expect(result).to.be.instanceOf(Promise);
       result.catch(function () {}); // ignore query errors, only testing type
+    });
+
+    it('should not work with wrong arguments', function () {
+      // few arguments
+      expect(function () {
+        mongoAdapter.findObjects();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.findObjects(Person);
+      }).to.throw(AssertionError);
+
+      // too many arguments
+      expect(function () {
+        mongoAdapter.findObjects(Person, {}, {});
+      }).to.throw(AssertionError);
+
+      // wrong arguments
+      expect(mongoAdapter.findObjects({}, {}))
+        .to.eventually.be.rejectedWith(AssertionError);
     });
 
     describe('simple objects', function () {
@@ -509,11 +596,12 @@ describe('MongoAdapter', function () {
       // back4app entity instances
       var john = new Author({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
         name: 'John', age: 30, married: true, readers: 1000,
-        // books not populated
+        // books populated with id only
         books: [
           new Book({id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}), // Dracula
           new Book({id: '1da78d86-de7a-4818-8737-e5723afdca85'}) // Hamlet
-        ]
+        ],
+        bestSeller: new Book({id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'})
       });
 
       beforeEach(function () {
@@ -523,7 +611,9 @@ describe('MongoAdapter', function () {
             {Entity: 'Book', _id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d',
               title: 'Dracula', publishedAt: new Date('1986-05-12')},
             {Entity: 'Book', _id: '1da78d86-de7a-4818-8737-e5723afdca85',
-              title: 'Hamlet', publishedAt: new Date('2005-08-01')}
+              title: 'Hamlet', publishedAt: new Date('2005-08-01')},
+            {Entity: 'Book', _id: '4232e3ba-129e-4507-a908-4fef92c7bbc7',
+              title: 'Harry Potter', publishedAt: new Date('1997-06-26')}
           ]),
           db.collection('Person').insertOne({// Author --> Person
             Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
@@ -531,7 +621,10 @@ describe('MongoAdapter', function () {
             books: [
               {Entity: 'Book', id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'},
               {Entity: 'Book', id: '1da78d86-de7a-4818-8737-e5723afdca85'}
-            ]
+            ],
+            bestSeller: {
+              Entity: 'Book', id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'
+            }
           })
         ]);
       });

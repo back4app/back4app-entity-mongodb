@@ -1,12 +1,10 @@
-//
-// Created by davimacedo on 28/10/15.
-//
-
 'use strict';
 
 var chai = require('chai');
 var expect = chai.expect;
 var AssertionError = chai.AssertionError;
+var Promise = require('bluebird');
+
 var entity = require('@back4app/back4app-entity');
 var Entity = entity.models.Entity;
 var settings = entity.settings;
@@ -16,6 +14,12 @@ require('../settings');
 var defaultAdapter = settings.ADAPTERS.default;
 
 describe('MongoAdapter#insertObject', function () {
+  it('expect to return a promise', function () {
+    var result = defaultAdapter.insertObject({});
+    expect(result).to.be.instanceOf(Promise);
+    result.catch(function () {}); // ignore query errors, only testing type
+  });
+
   it('expect to not work with wrong arguments', function () {
     expect(function () {
       defaultAdapter.insertObject();
@@ -466,6 +470,47 @@ describe('MongoAdapter#insertObject', function () {
           .then(function () {
             done();
           });
+      });
+  });
+
+  it('expect to work on Entity with dataName', function (done) {
+    var MyEntity50 = Entity.specify({
+      name: 'MyEntity50',
+      dataName: 'MyEntity50DataName',
+      attributes: {
+        title: {
+          type: 'String'
+        }
+      }
+    });
+
+    var entity = new MyEntity50({title: 'Hello'});
+
+    defaultAdapter
+      .insertObject(entity)
+      .then(function () {
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('MyEntity50DataName')
+          .find({_id: entity.id})
+          .toArray();
+      })
+      .then(function (documents) {
+        expect(documents).to.have.length(1);
+        expect(documents[0]).to.deep.equal(
+          defaultAdapter.objectToDocument(entity)
+        );
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('MyEntity50DataName')
+          .deleteOne({_id: entity.id});
+      })
+      .then(function () {
+        done();
       });
   });
 

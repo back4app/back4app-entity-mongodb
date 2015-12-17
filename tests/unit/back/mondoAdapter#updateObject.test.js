@@ -1,12 +1,10 @@
-//
-// Created by davimacedo on 28/10/15.
-//
-
 'use strict';
 
 var chai = require('chai');
 var expect = chai.expect;
 var AssertionError = chai.AssertionError;
+var Promise = require('bluebird');
+
 var entity = require('@back4app/back4app-entity');
 var Entity = entity.models.Entity;
 var settings = entity.settings;
@@ -16,6 +14,12 @@ require('../settings');
 var defaultAdapter = settings.ADAPTERS.default;
 
 describe('MongoAdapter#updateObject', function () {
+  it('expect to return a promise', function () {
+    var result = defaultAdapter.updateObject({});
+    expect(result).to.be.instanceOf(Promise);
+    result.catch(function () {}); // ignore query errors, only testing type
+  });
+
   it('expect to not work with wrong arguments', function () {
     expect(function () {
       defaultAdapter.updateObject();
@@ -134,6 +138,60 @@ describe('MongoAdapter#updateObject', function () {
       });
   });
 
+  it('expect to update inheritances correctly', function (done) {
+    var A2 = Entity.specify({
+      name: 'A2',
+      attributes: {
+        a1: {type: 'String'},
+        a2: {type: 'String'}
+      }
+    });
+
+    var B2 = A2.specify({
+      name: 'B2',
+      attributes: {
+        b1: {type: 'String'},
+        b2: {type: 'String'}
+      }
+    });
+
+    var entity = new B2({
+      a1: 'orig-a1',
+      a2: 'orig-a2',
+      b1: 'orig-b1',
+      b2: 'orig-b2'
+    });
+
+    defaultAdapter.insertObject(entity)
+      .then(function () {
+        entity.a1 = 'new-a1';
+        entity.b1 = 'new-b1';
+        return defaultAdapter.updateObject(entity);
+      })
+      .then(function () {
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('A2')
+          .find({_id: entity.id}).toArray();
+      })
+      .then(function (documents) {
+        expect(documents).to.have.length(1);
+        expect(documents[0])
+          .to.deep.equal(defaultAdapter.objectToDocument(entity, false));
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('A2')
+          .deleteOne({_id: entity.id});
+      })
+      .then(function () {
+        done();
+      });
+  });
+
   it('expect to update foreign keys correctly', function (done) {
     var Used = Entity.specify('Used2');
 
@@ -227,6 +285,53 @@ describe('MongoAdapter#updateObject', function () {
                 done();
               });
           });
+      });
+  });
+
+  it('expect to work on Entity with dataName', function (done) {
+    var MyEntity60 = Entity.specify({
+      name: 'MyEntity60',
+      dataName: 'MyEntity60DataName',
+      attributes: {
+        title: {
+          type: 'String'
+        }
+      }
+    });
+
+    var entity = new MyEntity60({title: 'Hello'});
+
+    defaultAdapter
+      .insertObject(entity)
+      .then(function () {
+        entity.title = 'Good bye!';
+        return defaultAdapter.updateObject(entity);
+      })
+      .then(function () {
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('MyEntity60DataName')
+          .find({_id: entity.id})
+          .toArray();
+      })
+      .then(function (documents) {
+        expect(documents).to.have.length(1);
+        expect(documents[0]).to.deep.equal(
+          defaultAdapter.objectToDocument(entity, false)
+        );
+        return defaultAdapter.getDatabase();
+      })
+      .then(function (database) {
+        return database
+          .collection('MyEntity60DataName')
+          .deleteOne({
+            _id: entity.id
+          });
+      })
+      .then(function () {
+        done();
       });
   });
 

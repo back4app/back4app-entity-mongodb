@@ -623,6 +623,12 @@ function _buildCursor(db, EntityClass, query) {
  * </pre>
  */
 function documentToObject(document, adapterName) {
+  expect(arguments).to.have.length(
+    2,
+    'Invalid arguments length when converting a MongoDB document into ' +
+    'an entity object (it has to be passed 2 arguments)'
+  );
+
   var obj = {};
 
   // replace `_id` with `id`
@@ -664,7 +670,6 @@ function documentToObject(document, adapterName) {
  *
  */
 function deleteObject(entityObject) {
-
   var mongoAdapter = this;
 
   expect(arguments).to.have.length(
@@ -682,45 +687,23 @@ function deleteObject(entityObject) {
 
     var EntityClass = entityObject.Entity;
 
-    var promises = [];
+    return mongoAdapter
+      .getDatabase()
+      .then(function (database) {
+        return database
+          .collection(getEntityCollectionName(EntityClass))
+          .findOneAndDelete({_id: entityObject.id});
+      })
+      .then(function (result) {
+        expect(result.ok).to.equal(
+          1,
+          'Invalid result.ok return of collection.findOneAndDelete ' +
+          'in MongoDB driver when deleting an Object (it should be 1)'
+        );
 
-    //search for possible superclasses of entityObject
-    while (EntityClass) {
-      promises.push(_deleteObject(EntityClass, entityObject.id));
-      EntityClass = EntityClass.General;
-    }
-
-    //restore entityObject
-    EntityClass = entityObject.Entity;
-
-    //search for possible subclasses of entityObject
-    var entitySpecializations = EntityClass.specializations;
-    for (var specialization in entitySpecializations) {
-      promises.push
-      (_deleteObject(entitySpecializations[specialization], entityObject.id));
-    }
-
-    Promise.all(promises)
-      .then(resolve)
+        resolve();
+      })
       .catch(reject);
-
-    function _deleteObject(EntityClass, id) {
-      return mongoAdapter
-        .getDatabase()
-        .then(function (database) {
-          return database
-            .collection(EntityClass.specification.name)
-            .findOneAndDelete({_id: id});
-        })
-        .then(function (result) {
-          expect(result.ok).to.equal(
-            1,
-            'Invalid result.ok return of collection.findOneAndDelete ' +
-            'in MongoDB driver when deleting an Object (it should be 1)'
-          );
-        });
-    }
-
   });
 }
 

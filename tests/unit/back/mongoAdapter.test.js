@@ -1,7 +1,3 @@
-//
-// Created by davimacedo on 22/10/15.
-//
-
 'use strict';
 
 var chai = require('chai');
@@ -711,6 +707,80 @@ describe('MongoAdapter', function () {
         Entity: 'MyEntity30',
         a1: {}
       });
+    });
+  });
+
+  describe('#documentToObject', function () {
+    it('expect to not work with wrong arguments', function () {
+      expect(function () {
+        mongoAdapter.documentToObject();
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.documentToObject(null);
+      }).to.throw(AssertionError);
+
+      expect(function () {
+        mongoAdapter.documentToObject({});
+      }).to.throw(AssertionError);
+    });
+
+    it('expect to convert correctly', function () {
+      var MyEntity40 = Entity.specify({
+        name: 'MyEntity40',
+        attributes: {
+          a1: {
+            type: 'String'
+          },
+          a2: {
+            type: 'Number'
+          }
+        }
+      });
+
+      var document = {
+        Entity: 'MyEntity40',
+        _id: '464d4917-0e45-4184-a672-3e1cbdbb13ab',
+        a1: 'Hello',
+        a2: 1234
+      };
+
+      expect(mongoAdapter.documentToObject(document, 'default'))
+        .to.deep.equal(new MyEntity40({
+          id: '464d4917-0e45-4184-a672-3e1cbdbb13ab',
+          a1: 'Hello',
+          a2: 1234
+        }));
+    });
+
+    it('expect to work on attributes with dataName', function () {
+      var MyEntity42 = Entity.specify({
+        name: 'MyEntity42',
+        attributes: {
+          a1: {
+            type: 'String',
+            dataName: 'a1DataName'
+          },
+          a2: {
+            type: 'Number',
+            dataName: 'a2DataName'
+          }
+        }
+      });
+
+      var document = {
+        Entity: 'MyEntity42',
+        _id: '645a5d38-e085-428f-bbf1-2f0628b7c797',
+        a1DataName: 'Hello',
+        a2DataName: 1234
+      };
+
+      expect(mongoAdapter.documentToObject(document, 'default'))
+          .to.deep.equal(new MyEntity42({
+          id: '645a5d38-e085-428f-bbf1-2f0628b7c797',
+          a1: 'Hello',
+          a2: 1234
+        }));
     });
   });
 
