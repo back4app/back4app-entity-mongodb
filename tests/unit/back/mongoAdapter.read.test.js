@@ -426,6 +426,7 @@ describe('MongoAdapter', function () {
       result.catch(function () {}); // ignore query errors, only testing type
     });
 
+
     it('should not work with wrong arguments', function () {
       // few arguments
       expect(function () {
@@ -438,11 +439,11 @@ describe('MongoAdapter', function () {
 
       // too many arguments
       expect(function () {
-        mongoAdapter.findObjects(Person, {}, {});
+        mongoAdapter.findObjects(Person, {}, {}, {});
       }).to.throw(AssertionError);
 
       // wrong arguments
-      expect(mongoAdapter.findObjects({}, {}))
+      expect(mongoAdapter.findObjects({}, {}, {}))
         .to.eventually.be.rejectedWith(AssertionError);
     });
 
@@ -454,6 +455,8 @@ describe('MongoAdapter', function () {
         name: 'Theo', age: 20, married: false});
       var will = new Person({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
         name: 'Will', age: 30, married: false});
+      var rick = new Person({id: '1999b810-4735-4dbe-b300-e1866b560685',
+        name: 'Rick', age: 30, married: false});
 
       beforeEach(function () {
         // populate test database
@@ -463,7 +466,9 @@ describe('MongoAdapter', function () {
           {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
             name: 'Theo', age: 20, married: false},
           {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
-            name: 'Will', age: 30, married: false}
+            name: 'Will', age: 30, married: false},
+          {Entity: 'Person', _id: '1999b810-4735-4dbe-b300-e1866b560685',
+            name: 'Rick', age: 30, married: false}
         ]);
       });
 
@@ -508,6 +513,31 @@ describe('MongoAdapter', function () {
         return expect(mongoAdapter.findObjects(Person, {name: 'Nobody'}))
           .to.become([]);
       });
+
+      it.only('should paginate resulted objects with given params without order', function () {
+        return expect(mongoAdapter.findObjects(Person, {age: {$gt: 25}},
+            {skip: 1, limit: 2}
+        ))
+            .to.become([will, rick])
+            .and.collectionOf(Person);
+      });
+      //
+      //it('should paginate resulted objects with given params in ascending order', function () {
+      //
+      //});
+      //
+      //it('should paginate resulted objects with given params in descending order', function () {
+      //
+      //});
+      //
+      //it('should paginate resulted objects with default params', function () {
+      //
+      //});
+      //
+      //it('should paginate resulted objects using Adapter.MAX_LIMIT', function () {
+      //
+      //});
+
     });
 
     describe('objects with generalization', function () {
