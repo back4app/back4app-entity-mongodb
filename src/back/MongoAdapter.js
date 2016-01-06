@@ -634,28 +634,28 @@ function findObjects(EntityClass, query, params) {
     '(it has to be passed 2 or 3 arguments)'
   );
 
+  params = params || {}; // cleaning
+
   function findDocuments(db) {
     var skip;
     var limit;
     var sort = {};
-    if (typeof params !== 'undefined') {
-      if (!params.hasOwnProperty(skip)) {
+
+    //skip = params.skip !== undefined ? params.skip : Adapter.DEFAULT_SKIP;
+
+      if (!params.hasOwnProperty('skip')) {
         skip = Adapter.DEFAULT_SKIP;
-      }
-      if (!params.hasOwnProperty(limit)) {
+      } else skip = params.skip;
+      if (!params.hasOwnProperty('limit')) {
         limit = Adapter.DEFAULT_LIMIT;
       } else {
         if (params.limit > Adapter.MAX_LIMIT) {
           limit = Adapter.MAX_LIMIT;
         } else limit = params.limit;
       }
-      if(params.hasOwnProperty(sort)) {
-        sort = params.sort;
-      }
-    } else {
-      skip = Adapter.DEFAULT_SKIP;
-      limit = Adapter.MAX_LIMIT;
-    }
+      if(!params.hasOwnProperty('sort')) {
+       sort = {_id: 1};
+      } else  sort = params.sort;
 
     return _buildCursor(db, EntityClass, query).skip(skip).limit(limit).sort(sort).toArray();
   }
@@ -668,8 +668,12 @@ function findObjects(EntityClass, query, params) {
     return entities;
   }
 
+  function error (e) {
+    console.log(e);
+  }
+
   return this.getDatabase()
-    .then(findDocuments)
+    .then(findDocuments, error)
     .then(populateEntities);
 }
 
