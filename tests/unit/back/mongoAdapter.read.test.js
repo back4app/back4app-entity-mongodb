@@ -7,6 +7,7 @@ var AssertionError = chai.AssertionError;
 var chaiAsPromised = require('chai-as-promised');
 var mongodb = require('mongodb');
 var Promise = require('bluebird');
+var uuid = require('node-uuid');
 var Entity = require('@back4app/back4app-entity').models.Entity;
 
 var MongoAdapter = require('../../../').MongoAdapter;
@@ -443,7 +444,7 @@ describe('MongoAdapter', function () {
       }).to.throw(AssertionError);
 
       // wrong arguments
-      expect(mongoAdapter.findObjects({}, {}, {}))
+      expect(mongoAdapter.findObjects({}, {}))
         .to.eventually.be.rejectedWith(AssertionError);
     });
 
@@ -455,7 +456,7 @@ describe('MongoAdapter', function () {
         name: 'Theo', age: 20, married: false});
       var will = new Person({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
         name: 'Will', age: 30, married: false});
-      var rick = new Person({id: '1999b810-4735-4dbe-b300-e1866b560685',
+      var rick = new Person({id: 'f540ff10-a7b1-4fe4-8deb-3505c305446e',
         name: 'Rick', age: 30, married: false});
 
       beforeEach(function () {
@@ -467,7 +468,7 @@ describe('MongoAdapter', function () {
             name: 'Theo', age: 20, married: false},
           {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
             name: 'Will', age: 30, married: false},
-          {Entity: 'Person', _id: '1999b810-4735-4dbe-b300-e1866b560685',
+          {Entity: 'Person', _id:  'f540ff10-a7b1-4fe4-8deb-3505c305446e',
             name: 'Rick', age: 30, married: false}
         ]);
       });
@@ -505,7 +506,7 @@ describe('MongoAdapter', function () {
           age: {$gt: 25},
           married: false
         }))
-          .to.become([will])
+          .to.become([will, rick])
           .and.collectionOf(Person);
       });
 
@@ -514,29 +515,112 @@ describe('MongoAdapter', function () {
           .to.become([]);
       });
 
-      it.only('should paginate resulted objects with given params without order', function () {
-        return expect(mongoAdapter.findObjects(Person, {age: {$gt: 25}},
-            {skip: 1, limit: 2}
-        ))
-            .to.become([will, rick])
+    });
+
+    describe('pagination with small database', function () {
+      // back4app entity instances
+      var john = new Person({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
+        name: 'John', age: 30, married: true});
+      var theo = new Person({id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
+        name: 'Theo', age: 20, married: false});
+      var will = new Person({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
+        name: 'Will', age: 30, married: false});
+      var rick = new Person({id: 'f540ff10-a7b1-4fe4-8deb-3505c305446e',
+        name: 'Rick', age: 30, married: false});
+
+      beforeEach(function () {
+        // populate test database
+        return db.collection('Person').insertMany([
+          {Entity: 'Person', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
+            name: 'John', age: 30, married: true},
+          {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
+            name: 'Theo', age: 20, married: false},
+          {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
+            name: 'Will', age: 30, married: false},
+          {Entity: 'Person', _id:  'f540ff10-a7b1-4fe4-8deb-3505c305446e',
+            name: 'Rick', age: 30, married: false}
+        ]);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should paginate resulted objects with given params and default order',
+          function () {
+        return expect(mongoAdapter.findObjects(
+            Person,
+            {age: {$gt: 25}},
+            {skip:1, limit:1}))
+            .to.become([will])
             .and.collectionOf(Person);
       });
-      //
-      //it('should paginate resulted objects with given params in ascending order', function () {
-      //
-      //});
-      //
-      //it('should paginate resulted objects with given params in descending order', function () {
-      //
-      //});
-      //
-      //it('should paginate resulted objects with default params', function () {
-      //
-      //});
-      //
-      //it('should paginate resulted objects using Adapter.MAX_LIMIT', function () {
-      //
-      //});
+      it('should paginate resulted objects with given params and ordered ' +
+          'descendently by name', function () {
+        return expect(mongoAdapter.findObjects(
+            Person,
+            {},
+            {skip:0, sort: {name: -1}}))
+            .to.become([will, theo, rick, john])
+            .and.collectionOf(Person);
+      });
+      it('should paginate resulted objects with given params and ordered ' +
+          'ascendently by name', function () {
+        return expect(mongoAdapter.findObjects(
+            Person,
+            {},
+            {skip:0, sort: {name: 1}}))
+            .to.become([john, rick, theo, will])
+            .and.collectionOf(Person);
+      });
+      it('should paginate resulted objects with default params', function () {
+        return expect(mongoAdapter.findObjects(Person, {age: {$lte: 30}}))
+            .to.become([john, theo, will, rick])
+            .and.collectionOf(Person);
+      });
+
+    });
+
+    describe('pagination with big database', function () {
+      var documents = [];
+      for (var i=1; i <= 150; i++) {
+        var aux = {};
+        aux.Entity = 'Person';
+        aux._id = uuid.v4();
+        aux.name = 'name' + i;
+        aux.age = i*5;
+        aux.married = i <= 40 ? true : false;
+        documents.push(aux);
+      }
+
+      beforeEach(function () {
+        // populate test database
+        return db.collection('Person').insertMany(documents);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should return Adapter.MAX_LIMIT number of objects', function () {
+       return mongoAdapter.findObjects(Person, {married: false}, {limit: 110})
+            .then(function (result) {
+              expect(result).to.have.length(100);
+            }, function (error) {
+              console.trace(error.message);
+            });
+      });
+
+      it('should return less than the limit passed', function () {
+        return mongoAdapter.findObjects(Person, {married: true}, {limit: 80})
+            .then(function (result) {
+              expect(result).to.have.length(40);
+            }, function (error) {
+              console.trace(error.message);
+            });
+      });
 
     });
 
