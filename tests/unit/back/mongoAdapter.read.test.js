@@ -589,7 +589,7 @@ describe('MongoAdapter', function () {
         aux.Entity = 'Person';
         aux._id = uuid.v4();
         aux.name = 'name' + i;
-        aux.age = i*5;
+        aux.age = 30;
         aux.married = i <= 40 ? true : false;
         documents.push(aux);
       }
@@ -605,7 +605,7 @@ describe('MongoAdapter', function () {
       });
 
       it('should return Adapter.MAX_LIMIT number of objects', function () {
-       return mongoAdapter.findObjects(Person, {married: false}, {limit: 110})
+        return mongoAdapter.findObjects(Person, {married: false}, {limit: 110})
             .then(function (result) {
               expect(result).to.have.length(100);
             }, function (error) {
