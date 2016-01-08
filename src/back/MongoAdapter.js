@@ -634,20 +634,13 @@ function findObjects(EntityClass, query, params) {
     '(it has to be passed 2 or 3 arguments)'
   );
 
-  params = params || {}; // cleaning the parameter
-
   function findDocuments(db) {
     var skip;
     var limit;
     var sort = {};
 
-    skip = params.skip !== undefined ? params.skip : Adapter.DEFAULT_SKIP;
-
-    limit = params.limit === undefined ?
-        Adapter.DEFAULT_LIMIT : params.limit > Adapter.MAX_LIMIT ?
-        Adapter.MAX_LIMIT : params.limit;
-
-    sort = params.sort !== undefined ? params.sort : {_id:1};
+    skip = params.skip;
+    limit = params.limit;
 
     return _buildCursor(db, EntityClass, query)
         .skip(skip)
