@@ -635,17 +635,18 @@ function findObjects(EntityClass, query, params) {
   );
 
   function findDocuments(db) {
-    var skip;
-    var limit;
-    var sort = {};
+    // cleaning params
+    params = params || {};
+    params.sort = params.sort || {};
+    if (params.sort.hasOwnProperty('id')) {
+      params.sort._id = params.sort.id;
+      delete params.sort.id;
+    }
 
-    skip = params.skip;
-    limit = params.limit;
-
-    return _buildCursor(db, EntityClass, query)
-        .skip(skip)
-        .limit(limit)
-        .sort(sort)
+    return _buildCursor(db, EntityClass, query, params)
+        .skip(params.skip)
+        .limit(params.limit)
+        .sort(params.sort)
         .toArray();
   }
 
