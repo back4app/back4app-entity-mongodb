@@ -637,7 +637,10 @@ function findObjects(EntityClass, query, params) {
   function findDocuments(db) {
     // cleaning params
     params = params || {};
-    params.sort = params.sort || {};
+    params.sort = params.sort || {id: 1};
+    params.skip = params.skip || 0;
+    params.limit = params.limit || 0;
+
     if (params.sort.hasOwnProperty('id')) {
       params.sort._id = params.sort.id;
       delete params.sort.id;
