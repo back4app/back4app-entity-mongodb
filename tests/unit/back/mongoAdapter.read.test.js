@@ -593,7 +593,7 @@ describe('MongoAdapter', function () {
         aux._id = uuid.v4();
         aux.name = 'name' + i;
         aux.age = 30;
-        aux.married = i <= 40 ? true : false;
+        aux.married = i <= 40;
         documents.push(aux);
       }
 
@@ -607,17 +607,17 @@ describe('MongoAdapter', function () {
         return db.dropDatabase();
       });
 
-      //it('should return MAX_LIMIT@back4app-rest number of objects',
-      //    function () {
-      //  return mongoAdapter.findObjects(Person,
-      //      {married: false},
-      //      {skip: 0, limit: 100, sort: {_id: 1}})
-      //      .then(function (result) {
-      //        expect(result).to.have.length(100);
-      //      }, function (error) {
-      //        console.trace(error.message);
-      //      });
-      //});
+      it('should return 100 objects as a result',
+          function () {
+        return mongoAdapter.findObjects(Person,
+            {married: false},
+            {skip: 0, limit: 100, sort: {_id: 1}})
+            .then(function (result) {
+              expect(result).to.have.length(100);
+            }, function (error) {
+              console.trace(error.message);
+            });
+      });
 
       it('should return less than the limit passed', function () {
         return mongoAdapter.findObjects(Person,
