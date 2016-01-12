@@ -614,6 +614,7 @@ function getObject(EntityClass, query) {
  * @param {!module:back4app-entity/models.Entity} entityObject The Entity Class
  * which instance will be searched within the collections.
  * @param {?Object} query Object for query search.
+ * @param {?Object} param Object for pagination parameters.
  * @returns {Promise.<object|Error>} Promise that returns found objects if
  * succeed or Error if failed.
  * @example
@@ -625,15 +626,31 @@ function getObject(EntityClass, query) {
  *     }
  *   });
  */
-function findObjects(EntityClass, query) {
-  expect(arguments).to.have.length(
+function findObjects(EntityClass, query, params) {
+  expect(arguments).to.have.length.within(
     2,
+    3,
     'Invalid arguments length when inserting an object in a MongoAdapter ' +
-    '(it has to be passed 2 arguments)'
+    '(it has to be passed 2 or 3 arguments)'
   );
 
   function findDocuments(db) {
-    return _buildCursor(db, EntityClass, query).toArray();
+    // cleaning params
+    params = params || {};
+    params.sort = params.sort || {id: 1};
+    params.skip = params.skip || 0;
+    params.limit = params.limit || 0;
+
+    if (params.sort.hasOwnProperty('id')) {
+      params.sort._id = params.sort.id;
+      delete params.sort.id;
+    }
+
+    return _buildCursor(db, EntityClass, query, params)
+        .skip(params.skip)
+        .limit(params.limit)
+        .sort(params.sort)
+        .toArray();
   }
 
   function populateEntities(docs) {

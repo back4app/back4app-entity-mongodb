@@ -7,6 +7,7 @@ var AssertionError = chai.AssertionError;
 var chaiAsPromised = require('chai-as-promised');
 var mongodb = require('mongodb');
 var Promise = require('bluebird');
+var uuid = require('node-uuid');
 var Entity = require('@back4app/back4app-entity').models.Entity;
 
 var MongoAdapter = require('../../../').MongoAdapter;
@@ -438,7 +439,7 @@ describe('MongoAdapter', function () {
 
       // too many arguments
       expect(function () {
-        mongoAdapter.findObjects(Person, {}, {});
+        mongoAdapter.findObjects(Person, {}, {}, {});
       }).to.throw(AssertionError);
 
       // wrong arguments
@@ -454,6 +455,8 @@ describe('MongoAdapter', function () {
         name: 'Theo', age: 20, married: false});
       var will = new Person({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
         name: 'Will', age: 30, married: false});
+      var rick = new Person({id: 'f540ff10-a7b1-4fe4-8deb-3505c305446e',
+        name: 'Rick', age: 30, married: false});
 
       beforeEach(function () {
         // populate test database
@@ -463,7 +466,9 @@ describe('MongoAdapter', function () {
           {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
             name: 'Theo', age: 20, married: false},
           {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
-            name: 'Will', age: 30, married: false}
+            name: 'Will', age: 30, married: false},
+          {Entity: 'Person', _id:  'f540ff10-a7b1-4fe4-8deb-3505c305446e',
+            name: 'Rick', age: 30, married: false}
         ]);
       });
 
@@ -480,7 +485,7 @@ describe('MongoAdapter', function () {
               '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7'
             ]
           }
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([john, theo])
           .and.collectionOf(Person);
       });
@@ -490,7 +495,7 @@ describe('MongoAdapter', function () {
           name: {
             $in: ['Theo', 'Will']
           }
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([theo, will])
           .and.collectionOf(Person);
       });
@@ -499,15 +504,132 @@ describe('MongoAdapter', function () {
         return expect(mongoAdapter.findObjects(Person, {
           age: {$gt: 25},
           married: false
-        }))
-          .to.become([will])
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
+          .to.become([will, rick])
           .and.collectionOf(Person);
       });
 
       it('should return empty array on query with no result', function () {
-        return expect(mongoAdapter.findObjects(Person, {name: 'Nobody'}))
+        return expect(mongoAdapter.findObjects(Person,
+            {name: 'Nobody'},
+            {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([]);
       });
+
+    });
+
+    describe('pagination with small database', function () {
+      // back4app entity instances
+      var john = new Person({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
+        name: 'John', age: 30, married: true});
+      var theo = new Person({id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
+        name: 'Theo', age: 20, married: false});
+      var will = new Person({id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
+        name: 'Will', age: 30, married: false});
+      var rick = new Person({id: 'f540ff10-a7b1-4fe4-8deb-3505c305446e',
+        name: 'Rick', age: 30, married: false});
+
+      beforeEach(function () {
+        // populate test database
+        return db.collection('Person').insertMany([
+          {Entity: 'Person', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
+            name: 'John', age: 30, married: true},
+          {Entity: 'Person', _id: '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7',
+            name: 'Theo', age: 20, married: false},
+          {Entity: 'Person', _id: 'd609db0b-b1f4-421a-a5f2-df8934ab023f',
+            name: 'Will', age: 30, married: false},
+          {Entity: 'Person', _id:  'f540ff10-a7b1-4fe4-8deb-3505c305446e',
+            name: 'Rick', age: 30, married: false}
+        ]);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should limit resulted objects with given params and default order',
+          function () {
+        return expect(mongoAdapter.findObjects(
+            Person,
+            {age: {$gt: 25}},
+            {skip:1, limit:1}))
+            .to.become([will])
+            .and.collectionOf(Person);
+      });
+      it('should limit resulted objects with given params and ordered ' +
+          'decreasingly by name', function () {
+        return expect(mongoAdapter.findObjects(
+            Person,
+            {},
+            {skip:0, limit: 30, sort: {name: -1}}))
+            .to.become([will, theo, rick, john])
+            .and.collectionOf(Person);
+      });
+      it('should limit resulted objects with given params and ordered ' +
+          'ascendantly by name', function () {
+        return expect(mongoAdapter.findObjects(
+            Person,
+            {},
+            {skip:0, limit: 30, sort: {name: 1}}))
+            .to.become([john, rick, theo, will])
+            .and.collectionOf(Person);
+      });
+      it('should limit resulted objects with default params', function () {
+        return expect(mongoAdapter.findObjects(Person,
+            {age: {$lte: 30}},
+            {skip: 0, limit: 30, sort: {_id: 1}}))
+            .to.become([john, theo, will, rick])
+            .and.collectionOf(Person);
+      });
+
+    });
+
+    describe('pagination with big database', function () {
+      var documents = [];
+      for (var i=1; i <= 150; i++) {
+        var aux = {};
+        aux.Entity = 'Person';
+        aux._id = uuid.v4();
+        aux.name = 'name' + i;
+        aux.age = 30;
+        aux.married = i <= 40;
+        documents.push(aux);
+      }
+
+      beforeEach(function () {
+        // populate test database
+        return db.collection('Person').insertMany(documents);
+      });
+
+      afterEach(function () {
+        // clear test database
+        return db.dropDatabase();
+      });
+
+      it('should return 100 objects as a result',
+          function () {
+        return mongoAdapter.findObjects(Person,
+            {married: false},
+            {skip: 0, limit: 100, sort: {_id: 1}})
+            .then(function (result) {
+              expect(result).to.have.length(100);
+            }, function (error) {
+              console.trace(error.message);
+            });
+      });
+
+      it('should return less than the limit passed', function () {
+        return mongoAdapter.findObjects(Person,
+            {married: true},
+            {skip:0, limit: 80, sort: {_id: 1}})
+            .then(function (result) {
+              expect(result).to.have.length(40);
+            }, function (error) {
+              console.trace(error.message);
+            });
+      });
+
     });
 
     describe('objects with generalization', function () {
@@ -544,7 +666,7 @@ describe('MongoAdapter', function () {
               '5c2ca70f-d51a-4c97-a3ea-1668bde10fe7'
             ]
           }
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([john, theo])
           .and.collectionOf(Author);
       });
@@ -552,7 +674,7 @@ describe('MongoAdapter', function () {
       it('should find objects by custom property', function () {
         return expect(mongoAdapter.findObjects(Author, {
           readers: {$gt: 500}
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([john, will])
           .and.collectionOf(Author);
       });
@@ -562,7 +684,7 @@ describe('MongoAdapter', function () {
           name: {
             $in: ['Theo', 'Will']
           }
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([theo, will])
           .and.collectionOf(Author);
       });
@@ -571,7 +693,7 @@ describe('MongoAdapter', function () {
         return expect(mongoAdapter.findObjects(Author, {
           married: false,
           readers: 1000
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([will])
           .and.collectionOf(Author);
       });
@@ -579,7 +701,7 @@ describe('MongoAdapter', function () {
       it('should find objects using parent\'s class', function () {
         return expect(mongoAdapter.findObjects(Person, {
           id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([john])
           .and.collectionOf(Author);
       });
@@ -587,15 +709,50 @@ describe('MongoAdapter', function () {
       it('should return empty array on query with no result', function () {
         return expect(mongoAdapter.findObjects(Author, {
           name: 'Nobody'
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([]);
       });
+
+      it('should skip the first resulted object', function () {
+        return expect(mongoAdapter.findObjects(Author, {
+          age: {$gte: 20}
+        }, {skip: 1, limit: 30, sort: {_id: 1}}))
+            .to.become([theo, will])
+            .and.collectionOf(Author);
+      });
+
+      it('should limit by two the resulted object', function () {
+        return expect(mongoAdapter.findObjects(Author, {
+          readers: {$gt: 400}
+        }, {skip: 0, limit: 2, sort: {_id: 1}}))
+            .to.become([john, theo])
+            .and.collectionOf(Author);
+      });
+
+      it('should sort decreasingly by name the resulted object', function () {
+        return expect(mongoAdapter.findObjects(Author,
+            {},
+            {skip: 0, limit: 30, sort: {name: -1}}))
+            .to.become([will, theo, john])
+            .and.collectionOf(Author);
+      });
+
     });
 
     describe('objects with association', function () {
       // back4app entity instances
       var john = new Author({id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
         name: 'John', age: 30, married: true, readers: 1000,
+        // books populated with id only
+        books: [
+          new Book({id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}), // Dracula
+          new Book({id: '1da78d86-de7a-4818-8737-e5723afdca85'}) // Hamlet
+        ],
+        bestSeller: new Book({id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'})
+      });
+
+      var will = new Author({id: 'cd547e8f-8e96-457d-9717-79e1911b26f9',
+        name: 'Will', age: 50, married: true, readers: 2000,
         // books populated with id only
         books: [
           new Book({id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'}), // Dracula
@@ -611,12 +768,12 @@ describe('MongoAdapter', function () {
             {Entity: 'Book', _id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d',
               title: 'Dracula', publishedAt: new Date('1986-05-12')},
             {Entity: 'Book', _id: '1da78d86-de7a-4818-8737-e5723afdca85',
-              title: 'Hamlet', publishedAt: new Date('2005-08-01')},
+              title: 'Hamlet', publishedAt: new Date('1986-05-12')},
             {Entity: 'Book', _id: '4232e3ba-129e-4507-a908-4fef92c7bbc7',
               title: 'Harry Potter', publishedAt: new Date('1997-06-26')}
           ]),
-          db.collection('Person').insertOne({// Author --> Person
-            Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
+          db.collection('Person').insertMany([// Author --> Person
+           { Entity: 'Author', _id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0',
             name: 'John', age: 30, married: true, readers: 1000,
             books: [
               {Entity: 'Book', id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'},
@@ -625,7 +782,19 @@ describe('MongoAdapter', function () {
             bestSeller: {
               Entity: 'Book', id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'
             }
-          })
+          },
+          {
+            Entity: 'Author', _id: 'cd547e8f-8e96-457d-9717-79e1911b26f9',
+            name: 'Will', age: 50, married: true, readers: 2000,
+            books: [
+              {Entity: 'Book', id: '2f3e8d4b-309c-4261-a462-6634ee8ca40d'},
+              {Entity: 'Book', id: '1da78d86-de7a-4818-8737-e5723afdca85'}
+            ],
+            bestSeller: {
+              Entity: 'Book', id: '4232e3ba-129e-4507-a908-4fef92c7bbc7'
+            }
+          }
+          ])
         ]);
       });
 
@@ -637,7 +806,7 @@ describe('MongoAdapter', function () {
       it('should find objects by id', function () {
         return expect(mongoAdapter.findObjects(Author, {
           id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([john])
           .and.collectionOf(Author);
       });
@@ -645,7 +814,7 @@ describe('MongoAdapter', function () {
       it('should find objects using parent\'s class', function () {
         return expect(mongoAdapter.findObjects(Person, {
           id: '0ca3c8c9-41a7-4967-a285-21f8cb4db2c0'
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([john])
           .and.collectionOf(Author);
       });
@@ -653,9 +822,35 @@ describe('MongoAdapter', function () {
       it('should find objects by association id', function () {
         return expect(mongoAdapter.findObjects(Author, {
           'books.id': '2f3e8d4b-309c-4261-a462-6634ee8ca40d'
-        }))
-          .to.become([john])
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
+          .to.become([john, will])
           .and.collectionOf(Author);
+      });
+
+      it('should find objects by association id sorted decreasingly',
+          function () {
+        return expect(mongoAdapter.findObjects(Author, {
+          'books.id': '2f3e8d4b-309c-4261-a462-6634ee8ca40d'
+        }, {skip: 0, limit: 30, sort: {_id: -1}}))
+            .to.become([will, john])
+            .and.collectionOf(Author);
+      });
+
+      it('should find objects by association id limited by one', function () {
+        return expect(mongoAdapter.findObjects(Author, {
+          'books.id': '2f3e8d4b-309c-4261-a462-6634ee8ca40d'
+        }, {skip: 0, limit: 1, sort: {_id: 1}}))
+            .to.become([john])
+            .and.collectionOf(Author);
+      });
+
+      it('should find objects by association id skiping the first ' +
+          'result object', function () {
+        return expect(mongoAdapter.findObjects(Author, {
+          'books.id': '2f3e8d4b-309c-4261-a462-6634ee8ca40d'
+        }, {skip: 1, limit: 30, sort: {_id: 1}}))
+            .to.become([will])
+            .and.collectionOf(Author);
       });
     });
 
@@ -697,7 +892,7 @@ describe('MongoAdapter', function () {
               'f4a369fd-36eb-40a2-9540-903c10b06f7e'
             ]
           }
-        }))
+        }, {skip: 0, limit: 30, sort: {_id: 1}}))
           .to.become([user2, user3])
           .and.collectionOf($User);
       });
