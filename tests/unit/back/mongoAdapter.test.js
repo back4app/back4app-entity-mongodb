@@ -674,6 +674,7 @@ describe('MongoAdapter', function () {
       expect(mongoAdapter.objectToDocument(myEntity302)).to.deep.equal({
         Entity: 'MyEntity30',
         _id: myEntity302.id,
+        permissions: null,
         a1: myObject,
         a2: null,
         a3DataName: null,
