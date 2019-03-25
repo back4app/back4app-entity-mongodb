@@ -42,7 +42,6 @@
   "dependencies": {
     "@back4app/back4app-entity": "^1.0.17",
     "bluebird": "^3.0.5",
-    "kerberos": "0.0.17",
     "mongodb": "^2.0.46"
   }
 }
